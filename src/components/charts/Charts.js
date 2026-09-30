@@ -4,6 +4,8 @@ import {
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart as ReLineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -64,6 +66,25 @@ export function OverviewBarChart({ data }) {
           <Tooltip content={<GlassTooltip />} />
           <Bar dataKey="value" name="Count" fill={palette.blue} radius={[8, 8, 0, 0]} />
         </ReBarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export function OverviewLineChart({ data }) {
+  return (
+    <div className="h-[280px] w-full">
+      <ResponsiveContainer>
+        <ReLineChart data={data} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="name" axisLine={false} tickLine={false} />
+          <YAxis allowDecimals={false} axisLine={false} tickLine={false} />
+          <Tooltip content={<GlassTooltip />} />
+          <Legend />
+          <Line type="monotone" dataKey="logins" name="Logins" stroke={palette.teal} strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="actions" name="Actions" stroke={palette.blue} strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="companies" name="Companies used" stroke="#7EB6F0" strokeWidth={2} dot={false} />
+        </ReLineChart>
       </ResponsiveContainer>
     </div>
   );

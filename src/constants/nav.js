@@ -18,11 +18,16 @@ export const modules = {
   reports: { to: "/reports", label: "Reports", icon: "chart" },
   settings: { to: "/settings", label: "Settings", icon: "cog" },
   company_settings: { to: "/company", label: "Company", icon: "building" },
-  audits: { to: "/audits", label: "Audits", icon: "list" },
+  audits: { to: "/audits", label: "Audit report", icon: "list" },
 };
 
 /** Platform admins manage tenants only; they never see company modules. */
-export const platformNavItems = [{ key: "platform", to: "/platform", label: "Companies", icon: "building" }];
+export const platformNavItems = [
+  { key: "dashboard", to: "/platform/dashboard", label: "Dashboard", icon: "home" },
+  { key: "platform", to: "/platform", label: "Companies", icon: "building" },
+  { key: "audits", to: "/platform/audits", label: "Audit report", icon: "list" },
+  { key: "settings", to: "/settings", label: "Settings", icon: "cog" },
+];
 
 export const menuGroups = [
   { id: "workspace", label: "Workspace", items: ["dashboard"] },
@@ -61,6 +66,7 @@ const SUPER_ADMIN_ORDER = [
   "delete_requests",
   "audits",
   "company_settings",
+  "settings",
 ];
 
 const REQUESTOR_MENU_KEYS = ["material_requests", "attendance", "settings"];
@@ -76,11 +82,12 @@ export function isModuleEnabled(key, features, catalog) {
 }
 
 function canViewModule(key, privileges, roleKey, features, catalog) {
+  if (roleKey === "super_admin" && (key === "settings" || key === "audits")) return true;
   if (!isModuleEnabled(key, features, catalog)) return false;
   if (key === "attendance") return true;
   if (
     roleKey === "super_admin" &&
-    ["projects", "departments", "roles", "privileges", "audits", "materials", "company_settings"].includes(key)
+    ["projects", "departments", "roles", "privileges", "audits", "materials", "company_settings", "settings"].includes(key)
   ) {
     return true;
   }
@@ -156,7 +163,7 @@ export function getModuleByPath(pathname) {
 }
 
 export function homePathForRole(roleKey) {
-  if (roleKey === "platform_admin") return "/platform";
+  if (roleKey === "platform_admin") return "/platform/dashboard";
   if (roleKey === "user" || roleKey === "requestor" || roleKey === "requester") {
     return "/material-requests";
   }

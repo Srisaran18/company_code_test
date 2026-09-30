@@ -5,6 +5,7 @@ const { buildCompanyCatalog, resolvePrivileges } = require("../utils/privileges"
 const { enabledFeatureKeys, featureName } = require("../utils/features");
 const { loadScope } = require("../utils/tenantScope");
 const { sendError, httpError } = require("../utils/httpError");
+const { isPlanExpired } = require("../utils/plans");
 
 function readToken(req) {
   const authHeader = req.headers.authorization || req.headers.Authorization;
@@ -46,6 +47,9 @@ async function loadContext(userId) {
   if (!company) throw httpError(403, "Company not found", "COMPANY_INACTIVE");
   if (company.status !== "active") {
     throw httpError(403, "Your company account is not active. Contact your provider.", "COMPANY_INACTIVE");
+  }
+  if (isPlanExpired(company)) {
+    throw httpError(403, `Your company's ${company.plan.mode} has expired. Contact your provider.`, "COMPANY_PLAN_EXPIRED");
   }
 
   const [features, catalog, scope] = await Promise.all([
@@ -106,6 +110,12 @@ const authenticate = async (req, res, next) => {
     req.scope = context.scope;
     req.userRecord = context.record;
     rejectForeignCompany(req);
+    const seen = context.record.lastSeenAt;
+    if (!seen || Date.now() - new Date(seen).getTime() > 60 * 1000) {
+      User.updateOne({ _id: context.record._id }, { $set: { lastSeenAt: new Date() } })
+        .unscoped()
+        .catch(() => {});
+    }
     next();
   } catch (error) {
     return sendError(res, error);
@@ -133,12 +143,13 @@ const verifyPlatformAdmin = (req, res, next) =>
     next();
   });
 
-const requireFeature = (featureKey) => (req, res, next) => {
-  if (req.tenant?.features?.includes(featureKey)) return next();
+/** Passes when any of the given features is enabled for the company. */
+const requireFeature = (...featureKeys) => (req, res, next) => {
+  if (featureKeys.some((key) => req.tenant?.features?.includes(key))) return next();
   return res.status(403).json({
     success: false,
     code: "FEATURE_NOT_ENABLED",
-    message: `${featureName(featureKey)} is not enabled for this company.`,
+    message: `${featureName(featureKeys[0])} is not enabled for this company.`,
   });
 };
 

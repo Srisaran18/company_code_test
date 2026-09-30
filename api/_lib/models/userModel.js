@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
     userCreateLimit: { type: Number, default: 5, min: 0 },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     active: { type: Boolean, default: true },
+    lastSeenAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

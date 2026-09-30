@@ -6,6 +6,7 @@ export default function ConfirmDialog({
   title = "Confirm",
   message,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   danger = false,
   onConfirm,
   onCancel,
@@ -27,7 +28,7 @@ export default function ConfirmDialog({
         {children ? <div className="mt-4">{children}</div> : null}
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" className={ghostBtn} onClick={onCancel}>
-            Cancel
+            {cancelLabel}
           </button>
           <button
             type="button"

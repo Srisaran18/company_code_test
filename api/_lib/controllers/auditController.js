@@ -52,4 +52,4 @@ const listAudits = async (req, res) => {
   }
 };
 
-module.exports = { listAudits };
+module.exports = { listAudits, toPublicAudit: toPublic };

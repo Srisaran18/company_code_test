@@ -6,17 +6,7 @@ import { setCompany } from "../../store/authSlice";
 import { api } from "../../services/api";
 import GlassPanel, { PageIntro } from "../../components/ui/GlassPanel";
 import { fieldClass, primaryBtn } from "../../components/ui/formStyles";
-
-const PROFILE_FIELDS = [
-  { key: "name", label: "Company name", required: true },
-  { key: "legalName", label: "Legal name" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
-  { key: "address", label: "Address" },
-  { key: "country", label: "Country" },
-  { key: "timezone", label: "Timezone (e.g. Asia/Riyadh)" },
-  { key: "currency", label: "Currency (ISO code, e.g. SAR)" },
-];
+import CompanyProfileFields, { normalizeProfile, profilePayload } from "../platform/CompanyProfileFields";
 
 const PREFIX_FIELDS = [
   { key: "mrPrefix", label: "Material request prefix" },
@@ -28,6 +18,7 @@ export default function CompanySettingsPage() {
   const dispatch = useDispatch();
   const roleKey = useSelector((state) => state.auth.role?.key);
   const privileges = useSelector((state) => state.auth.privileges);
+  const userEmail = useSelector((state) => state.auth.user?.email || "");
   const isSuperAdmin = roleKey === "super_admin";
   const canView = isSuperAdmin || hasPrivilege(privileges, "company_settings", "view");
   const canEdit = isSuperAdmin || hasPrivilege(privileges, "company_settings", "edit");
@@ -37,7 +28,6 @@ export default function CompanySettingsPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     if (!canView) return;
     let cancelled = false;
@@ -45,7 +35,7 @@ export default function CompanySettingsPage() {
       try {
         const data = await api.get("/company");
         if (cancelled) return;
-        setForm({ ...data.company, settings: { ...(data.company.settings || {}) } });
+        setForm(normalizeProfile({ ...data.company, settings: { ...(data.company.settings || {}) } }));
         setFeatures(data.features || []);
         setDateFormats(data.dateFormats || []);
       } catch (err) {
@@ -67,8 +57,7 @@ export default function CompanySettingsPage() {
     setMessage("");
     setSaving(true);
     try {
-      const payload = Object.fromEntries(PROFILE_FIELDS.map((field) => [field.key, form[field.key] || ""]));
-      payload.currency = String(payload.currency).toUpperCase();
+      const payload = profilePayload(form);
       payload.settings = {
         dateFormat: form.settings.dateFormat,
         mrPrefix: form.settings.mrPrefix,
@@ -97,18 +86,16 @@ export default function CompanySettingsPage() {
         ) : (
           <form className="grid gap-3 sm:grid-cols-2" onSubmit={onSave}>
             <p className="text-sm text-white/50 sm:col-span-2">Company code: {form.code}</p>
-            {PROFILE_FIELDS.map((field) => (
-              <label key={field.key} className="block">
-                <span className="mb-1.5 block text-sm text-white/70">{field.label}</span>
-                <input
-                  className={fieldClass}
-                  value={form[field.key] || ""}
-                  disabled={!canEdit}
-                  required={field.required}
-                  onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                />
-              </label>
-            ))}
+            <div className="sm:col-span-2">
+              <CompanyProfileFields
+                value={form}
+                onChange={setForm}
+                disabled={!canEdit}
+                lockName
+                lockEmail
+                emailInUse={userEmail}
+              />
+            </div>
             <label className="block">
               <span className="mb-1.5 block text-sm text-white/70">Date format</span>
               <select

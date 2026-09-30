@@ -3,7 +3,21 @@ const { FEATURES } = require("../utils/permissionCatalog");
 const { httpError, sendError } = require("../utils/httpError");
 const { logAudit } = require("../utils/audit");
 
-const PROFILE_FIELDS = ["name", "legalName", "email", "phone", "address", "country", "timezone", "currency", "logoUrl"];
+const PROFILE_FIELDS = [
+  "name",
+  "legalName",
+  "email",
+  "phone",
+  "address",
+  "city",
+  "state",
+  "postalCode",
+  "country",
+  "taxNumber",
+  "timezone",
+  "currency",
+  "logoUrl",
+];
 const SETTING_FIELDS = ["dateFormat", "mrPrefix", "woPrefix", "poPrefix", "numberPadding"];
 const DATE_FORMATS = ["DD-MM-YYYY", "MM-DD-YYYY", "YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "MMM D, YYYY"];
 
@@ -20,6 +34,8 @@ function validTimezone(value) {
 function applyCompanyInput(company, body) {
   PROFILE_FIELDS.forEach((field) => {
     if (body[field] === undefined) return;
+    // Name and email are fixed once they have been saved.
+    if ((field === "name" || field === "email") && String(company[field] || "").trim()) return;
     company[field] = String(body[field] ?? "").trim();
   });
   if (!String(company.name || "").trim()) throw httpError(400, "Company name is required");

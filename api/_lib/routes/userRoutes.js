@@ -1,5 +1,5 @@
 const express = require("express");
-const { verifyToken, requirePrivilege } = require("../middlewares/authMiddleware");
+const { verifyToken, requirePrivilege, requireFeature } = require("../middlewares/authMiddleware");
 const {
   listUsers,
   createUser,
@@ -16,6 +16,7 @@ const router = express.Router();
 router.use(verifyToken);
 router.put("/me", updateProfile);
 router.put("/me/password", changePassword);
+router.use(requireFeature("users"));
 router.get("/create-quota", createQuota);
 router.get("/", requirePrivilege("users", "view"), listUsers);
 router.post("/", requirePrivilege("users", "create"), createUser);

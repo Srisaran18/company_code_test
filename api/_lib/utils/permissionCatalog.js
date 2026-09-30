@@ -4,7 +4,16 @@
  */
 
 const FEATURES = Object.freeze([
-  { key: "core", name: "Core CAFM", description: "Users, roles, projects, departments, settings, audits", alwaysOn: true },
+  { key: "core", name: "Core (Dashboard & my settings)", description: "Home dashboard and personal account settings", alwaysOn: true },
+  { key: "attendance", name: "Attendance", description: "Attendance", splitFromCore: true },
+  { key: "users", name: "Users", description: "User management", splitFromCore: true },
+  { key: "projects", name: "Projects", description: "Create and manage projects", splitFromCore: true },
+  { key: "departments", name: "Departments", description: "Create and manage departments", splitFromCore: true },
+  { key: "privileges", name: "Privileges", description: "Department and user privileges", splitFromCore: true },
+  { key: "roles", name: "Roles", description: "Roles and role privileges", splitFromCore: true },
+  { key: "delete_requests", name: "Delete Requests", description: "Review delete requests", splitFromCore: true },
+  { key: "audits", name: "Audits", description: "Company audit log", splitFromCore: true },
+  { key: "company_settings", name: "Company Settings", description: "Company profile and numbering", splitFromCore: true },
   { key: "material_requests", name: "Material Requests", description: "Material catalogue, MRs and approvals" },
   { key: "procurement", name: "Procurement", description: "Sourcing, RFQ, quotations, purchase orders, deliveries, payments" },
   { key: "supplier_management", name: "Supplier Management", description: "Supplier directory" },
@@ -18,19 +27,21 @@ const FEATURES = Object.freeze([
 
 const FEATURE_KEYS = FEATURES.map((item) => item.key);
 const ALWAYS_ON_FEATURES = FEATURES.filter((item) => item.alwaysOn).map((item) => item.key);
+/** Former Core CAFM screens; companies that existed before the split keep them enabled. */
+const SPLIT_CORE_FEATURES = FEATURES.filter((item) => item.splitFromCore).map((item) => item.key);
 
 const MODULES = Object.freeze({
   dashboard: { feature: "core", actions: ["view"] },
-  attendance: { feature: "core", actions: ["view"] },
-  users: { feature: "core", actions: ["view", "create", "edit", "delete"] },
-  roles: { feature: "core", actions: ["view", "create", "edit", "delete"] },
-  privileges: { feature: "core", actions: ["view", "create", "edit", "delete"] },
-  projects: { feature: "core", actions: ["view", "create", "edit", "delete"] },
-  departments: { feature: "core", actions: ["view", "create", "edit", "delete"] },
-  delete_requests: { feature: "core", actions: ["view", "approve", "reject"] },
-  audits: { feature: "core", actions: ["view"] },
+  attendance: { feature: "attendance", actions: ["view"] },
+  users: { feature: "users", actions: ["view", "create", "edit", "delete"] },
+  roles: { feature: "roles", actions: ["view", "create", "edit", "delete"] },
+  privileges: { feature: "privileges", actions: ["view", "create", "edit", "delete"] },
+  projects: { feature: "projects", actions: ["view", "create", "edit", "delete"] },
+  departments: { feature: "departments", actions: ["view", "create", "edit", "delete"] },
+  delete_requests: { feature: "delete_requests", actions: ["view", "approve", "reject"] },
+  audits: { feature: "audits", actions: ["view"] },
   settings: { feature: "core", actions: ["view", "edit"] },
-  company_settings: { feature: "core", actions: ["view", "edit"] },
+  company_settings: { feature: "company_settings", actions: ["view", "edit"] },
   material_requests: { feature: "material_requests", actions: ["view", "create", "edit", "delete"] },
   approvals: { feature: "material_requests", actions: ["view", "approve", "reject"] },
   materials: { feature: "material_requests", actions: ["view", "create", "edit", "delete"] },
@@ -44,6 +55,12 @@ const MODULES = Object.freeze({
 
 function featureForModule(moduleKey) {
   return MODULES[moduleKey]?.feature || null;
+}
+
+function modulesForFeature(featureKey) {
+  return Object.entries(MODULES)
+    .filter(([, definition]) => definition.feature === featureKey)
+    .map(([key, definition]) => ({ key, actions: [...definition.actions] }));
 }
 
 /** Drops unknown modules/actions. Throws with statusCode 400 when `strict`. */
@@ -87,8 +104,10 @@ module.exports = {
   FEATURES,
   FEATURE_KEYS,
   ALWAYS_ON_FEATURES,
+  SPLIT_CORE_FEATURES,
   MODULES,
   featureForModule,
+  modulesForFeature,
   sanitizePrivilegeMap,
   sanitizePermissionList,
   filterPrivilegesByFeatures,

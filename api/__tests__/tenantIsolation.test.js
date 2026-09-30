@@ -10,6 +10,7 @@ const Role = require("../_lib/models/roleModel");
 const User = require("../_lib/models/userModel");
 const Company = require("../_lib/models/companyModel");
 const { provisionCompany } = require("../_lib/data/seed");
+const { SPLIT_CORE_FEATURES } = require("../_lib/utils/permissionCatalog");
 
 const year = new Date().getFullYear();
 const ctx = {};
@@ -24,9 +25,15 @@ before(async () => {
   await helpers.startDb();
 
   // Company A subscribes to Material Requests but NOT Procurement. Company B has both.
-  ctx.A = await provisionCompany({ code: "COA", name: "Company A" }, { featureKeys: ["material_requests", "reports"] });
-  ctx.B = await provisionCompany({ code: "COB", name: "Company B" }, { featureKeys: ["material_requests", "procurement"] });
-  ctx.C = await provisionCompany({ code: "COC", name: "Company C" }, { featureKeys: [] });
+  ctx.A = await provisionCompany(
+    { code: "COA", name: "Company A" },
+    { featureKeys: [...SPLIT_CORE_FEATURES, "material_requests", "reports"] }
+  );
+  ctx.B = await provisionCompany(
+    { code: "COB", name: "Company B" },
+    { featureKeys: [...SPLIT_CORE_FEATURES, "material_requests", "procurement"] }
+  );
+  ctx.C = await provisionCompany({ code: "COC", name: "Company C" }, { featureKeys: [...SPLIT_CORE_FEATURES] });
 
   ctx.A1 = await helpers.makeProject(ctx.A, "Westfield Mall");
   ctx.A2 = await helpers.makeProject(ctx.A, "Another Mall");
@@ -418,11 +425,125 @@ describe("Platform vs company administration", () => {
   test("platform creates a company with its own system roles and admin", async () => {
     const res = await as(ctx.platform)
       .post("/platform/companies")
-      .send({ code: "NEWCO", name: "New Co", features: ["material_requests"], admin: { email: "boss@newco.test" } });
+      .send({
+        code: "9001",
+        name: "New Co",
+        features: ["material_requests"],
+        plan: { mode: "subscription", duration: 12 },
+        admin: { email: "boss@newco.test" },
+      });
     assert.equal(res.status, 201, JSON.stringify(res.body));
     const roles = await Role.find({ companyId: res.body.company.id });
     assert.ok(roles.some((item) => item.key === "super_admin" && item.isSystemRole));
     assert.ok(res.body.adminPassword);
+    assert.equal(res.body.adminPasswordEmailed, false);
+  });
+
+  test("platform generates a company code and returns that company's audits", async () => {
+    const res = await as(ctx.platform)
+      .post("/platform/companies")
+      .send({
+        name: "Default Code Co",
+        timezone: "Asia/Riyadh",
+        plan: { mode: "demo", duration: 10 },
+        admin: { email: "boss2@newco.test", name: "Boss" },
+      });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.match(res.body.company.code, /^\d+$/);
+    assert.match(res.body.company.timezone, /Riyadh|UTC/);
+
+    const detail = await as(ctx.platform).get(`/platform/companies/${res.body.company.id}`);
+    assert.equal(detail.status, 200);
+    assert.ok(detail.body.admins.some((item) => item.email === "boss2@newco.test"));
+    const material = detail.body.features.find((item) => item.key === "material_requests");
+    assert.ok(material.modules.some((item) => item.key === "material_requests"));
+
+    const audits = await as(ctx.platform).get(`/platform/companies/${res.body.company.id}/audits`);
+    assert.equal(audits.status, 200);
+    assert.ok(audits.body.audits.some((item) => String(item.summary).includes(res.body.company.code)));
+
+    const other = await as(ctx.platform).get(`/platform/companies/${ctx.A._id}/audits`);
+    assert.equal(other.status, 200);
+    assert.ok(!other.body.audits.some((item) => String(item.summary).includes(res.body.company.code)));
+    assert.equal((await as(ctx.adminA).get(`/platform/companies/${ctx.A._id}/audits`)).status, 403);
+  });
+
+  test("company plan: demo days, subscription months, expiry blocks access", async () => {
+    const bad = await as(ctx.platform)
+      .post("/platform/companies")
+      .send({ name: "Bad Plan Co", plan: { mode: "demo", duration: 7 } });
+    assert.equal(bad.status, 400);
+    const missing = await as(ctx.platform).post("/platform/companies").send({ name: "No Plan Co" });
+    assert.equal(missing.status, 400);
+
+    const res = await as(ctx.platform)
+      .post("/platform/companies")
+      .send({ name: "Demo Plan Co", plan: { mode: "demo", duration: 15 } });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.company.plan.mode, "demo");
+    assert.equal(res.body.company.plan.unit, "days");
+    assert.equal(res.body.company.plan.daysLeft, 15);
+    for (const feature of res.body.features) {
+      assert.equal(feature.enabled, feature.alwaysOn, `${feature.key} should start unticked`);
+      if (feature.alwaysOn) continue;
+      assert.equal(new Date(feature.startDate).getTime(), new Date(res.body.company.plan.startDate).getTime());
+      assert.equal(new Date(feature.endDate).getTime(), new Date(res.body.company.plan.endDate).getTime());
+    }
+
+    const upgraded = await as(ctx.platform)
+      .put(`/platform/companies/${res.body.company.id}`)
+      .send({ plan: { mode: "subscription", duration: 6 } });
+    assert.equal(upgraded.status, 200, JSON.stringify(upgraded.body));
+    assert.equal(upgraded.body.company.plan.mode, "subscription");
+    assert.equal(upgraded.body.company.plan.unit, "months");
+    const procurement = upgraded.body.features.find((item) => item.key === "procurement");
+    assert.equal(procurement.enabled, false);
+    assert.equal(new Date(procurement.endDate).getTime(), new Date(upgraded.body.company.plan.endDate).getTime());
+
+    const boss = await helpers.makeUser(
+      { _id: res.body.company.id },
+      { name: "Demo Boss", email: "boss@demoplan.test", role: "super_admin", allProjects: true }
+    );
+    assert.equal((await as(boss).get("/users")).status, 403);
+    assert.equal((await as(boss).get("/audits")).status, 200);
+    await as(ctx.platform)
+      .put(`/platform/companies/${res.body.company.id}/features`)
+      .send({ features: [{ key: "users", enabled: true }] });
+    assert.equal((await as(boss).get("/users")).status, 200);
+    assert.equal((await as(boss).get("/audits")).status, 200);
+
+    const past = new Date(Date.now() - 20 * 86400000);
+    await Company.updateOne({ _id: ctx.A._id }, { plan: { mode: "demo", duration: 5, unit: "days", startDate: past, endDate: new Date(past.getTime() + 5 * 86400000) } });
+    const blocked = await as(ctx.adminA).get("/projects");
+    assert.equal(blocked.status, 403);
+    assert.equal(blocked.body.code, "COMPANY_PLAN_EXPIRED");
+    await Company.updateOne({ _id: ctx.A._id }, { $unset: { plan: 1 } });
+    assert.equal((await as(ctx.adminA).get("/projects")).status, 200);
+  });
+
+  test("platform dashboard and audit filters", async () => {
+    const dash = await as(ctx.platform).get("/platform/dashboard");
+    assert.equal(dash.status, 200, JSON.stringify(dash.body));
+    assert.ok(dash.body.kpis.companiesTotal >= 3);
+    assert.equal(dash.body.usageByDay.length, 14);
+
+    const platformAudits = await as(ctx.platform).get("/platform/audits?actor=platform");
+    assert.equal(platformAudits.status, 200, JSON.stringify(platformAudits.body));
+    assert.ok(platformAudits.body.audits.every((item) => item.isPlatformActor === true));
+    assert.ok(platformAudits.body.companies.some((item) => item.code === "COA"));
+
+    const companyA = await as(ctx.platform).get(`/platform/audits?company=${ctx.A._id}`);
+    assert.equal(companyA.status, 200);
+    assert.ok(companyA.body.audits.every((item) => item.companyId === String(ctx.A._id)));
+
+    const search = await as(ctx.platform).get("/platform/audits?q=COA");
+    assert.equal(search.status, 200);
+  });
+
+  test("project code defaults from the project name", async () => {
+    const res = await as(ctx.adminA).post("/projects").send({ name: "Harbor Tower" });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.project.code, "HARBORTOWER");
   });
 });
 

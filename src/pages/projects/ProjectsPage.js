@@ -10,6 +10,7 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import DataTable from "../../components/ui/DataTable";
 import GlassPanel, { PageIntro } from "../../components/ui/GlassPanel";
 import { fieldClass, ghostBtn, primaryBtn } from "../../components/ui/formStyles";
+import { codeFromName } from "../../utils/codes";
 
 export default function ProjectsPage() {
   const dispatch = useDispatch();
@@ -23,6 +24,7 @@ export default function ProjectsPage() {
   const canDelete = isSuperAdmin || hasPrivilege(privileges, "projects", "delete");
   const [projects, setProjects] = useState([]);
   const [form, setForm] = useState(null);
+  const [codeLocked, setCodeLocked] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [error, setError] = useState("");
 
@@ -50,6 +52,7 @@ export default function ProjectsPage() {
       if (form.id) await api.put(`/projects/${form.id}`, payload);
       else await api.post("/projects", payload);
       setForm(null);
+      setCodeLocked(false);
       await load();
       await dispatch(refreshDirectory());
     } catch (err) {
@@ -84,8 +87,10 @@ export default function ProjectsPage() {
                   ? {
                       label: "Edit",
                       tone: "edit",
-                      onClick: () =>
-                        setForm({ id: project.id, name: project.name, code: project.code, status: project.status }),
+                      onClick: () => {
+                        setCodeLocked(true);
+                        setForm({ id: project.id, name: project.name, code: project.code, status: project.status });
+                      },
                     }
                   : null,
                 canDelete ? { label: "Delete", tone: "delete", onClick: () => setPendingDelete(project) } : null,
@@ -115,6 +120,7 @@ export default function ProjectsPage() {
               className={primaryBtn}
               onClick={() => {
                 setError("");
+                setCodeLocked(false);
                 setForm({ name: "", code: "", status: "active" });
               }}
             >
@@ -133,16 +139,27 @@ export default function ProjectsPage() {
               <input
                 className={fieldClass}
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    name: e.target.value,
+                    code: form.id || codeLocked ? form.code : codeFromName(e.target.value, "PRJ"),
+                  })
+                }
                 required
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm text-white/70">Code (optional)</span>
+              <span className="mb-1.5 block text-sm text-white/70">Code (default from name)</span>
               <input
                 className={fieldClass}
                 value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                placeholder="Auto from name"
+                onChange={(e) => {
+                  const code = e.target.value.toUpperCase();
+                  setCodeLocked(Boolean(code));
+                  setForm({ ...form, code });
+                }}
               />
             </label>
             <label className="block">
@@ -160,7 +177,7 @@ export default function ProjectsPage() {
               <button type="submit" className={primaryBtn}>
                 Save
               </button>
-              <button type="button" className={ghostBtn} onClick={() => setForm(null)}>
+              <button type="button" className={ghostBtn} onClick={() => { setForm(null); setCodeLocked(false); }}>
                 Cancel
               </button>
             </div>

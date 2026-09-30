@@ -50,11 +50,22 @@ function systemRoleTemplates() {
 
 async function syncFeatures() {
   for (const item of FEATURES) {
-    await Feature.updateOne(
+    const result = await Feature.updateOne(
       { key: item.key },
       { $set: { name: item.name, description: item.description }, $setOnInsert: { status: "active" } },
       { upsert: true }
     );
+    if (item.splitFromCore && result.upsertedCount) {
+      const feature = await Feature.findOne({ key: item.key });
+      const companies = await Company.find().select("_id");
+      for (const company of companies) {
+        await CompanyFeature.updateOne(
+          { companyId: company._id, featureId: feature._id },
+          { $setOnInsert: { featureKey: item.key, enabled: true, startDate: null, endDate: null } },
+          { upsert: true }
+        );
+      }
+    }
   }
 }
 
@@ -97,11 +108,16 @@ async function provisionCompany(input, { featureKeys = [] } = {}) {
     phone: input.phone || "",
     address: input.address || "",
     country: input.country || "",
+    state: input.state || "",
+    city: input.city || "",
+    postalCode: input.postalCode || "",
+    taxNumber: input.taxNumber || "",
     timezone: input.timezone || "UTC",
     currency: input.currency || "USD",
     logoUrl: input.logoUrl || "",
     status: input.status || "active",
     settings: input.settings || {},
+    plan: input.plan || undefined,
   });
   await ensureSystemRoles(company._id);
   await setCompanyFeatures(company._id, featureKeys);

@@ -8,6 +8,7 @@ const { toPublicUser, scopedUserQuery } = require("../utils/privileges");
 const { MODULES } = require("../utils/permissionCatalog");
 const { logAudit } = require("../utils/audit");
 const { sendError } = require("../utils/httpError");
+const { isPlanExpired, toPublicPlan } = require("../utils/plans");
 
 function toPublicDepartment(item, projectNames = {}) {
   return {
@@ -32,9 +33,14 @@ function toPublicCompany(company) {
     timezone: company.timezone,
     currency: company.currency,
     country: company.country || "",
+    state: company.state || "",
+    city: company.city || "",
+    postalCode: company.postalCode || "",
+    taxNumber: company.taxNumber || "",
     logoUrl: company.logoUrl || "",
     status: company.status,
     settings: company.settings || {},
+    plan: toPublicPlan(company.plan),
   };
 }
 
@@ -170,14 +176,23 @@ const login = async (req, res) => {
           message: "Your company account is not active. Contact your provider.",
         });
       }
+      if (isPlanExpired(company)) {
+        return res.status(403).json({
+          success: false,
+          code: "COMPANY_PLAN_EXPIRED",
+          message: `Your company's ${company.plan.mode} has expired. Contact your provider.`,
+        });
+      }
     }
 
     const session = await sessionPayload(user);
+    user.lastSeenAt = new Date();
+    await user.save();
     await logAudit({
       action: "login",
       module: "auth",
       summary: `${user.name} signed in`,
-      actor,
+      actor: { ...actor, isPlatformAdmin: user.isPlatformAdmin === true, role: user.isPlatformAdmin ? "platform_admin" : user.role },
       targetType: "user",
       targetId: user._id.toString(),
     });

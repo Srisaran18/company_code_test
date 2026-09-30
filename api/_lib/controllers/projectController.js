@@ -5,6 +5,7 @@ const MaterialRequest = require("../models/materialRequestModel");
 const ProjectManager = require("../models/projectManagerModel");
 const User = require("../models/userModel");
 const { tenantFilter, projectFilter, isValidId, toId } = require("../utils/tenantScope");
+const { uniqueProjectCode } = require("../utils/codes");
 const { sendError } = require("../utils/httpError");
 const { logAudit } = require("../utils/audit");
 
@@ -60,11 +61,15 @@ const saveProject = async (req, res) => {
     if (!req.params.id) {
       const exists = await Project.exists(tenantFilter(req, { key }));
       if (exists) return res.status(409).json({ message: "A project with this name already exists" });
+      let code = String(req.body.code || "").trim().toUpperCase();
+      if (!code) code = await uniqueProjectCode(req.tenant.companyId, name);
+      const codeTaken = await Project.exists(tenantFilter(req, { code }));
+      if (codeTaken) return res.status(409).json({ message: "Project code already exists" });
       const project = await Project.create({
         companyId: req.tenant.companyId,
         name,
         key,
-        code: String(req.body.code || "").trim(),
+        code,
         status: req.body.status === "inactive" ? "inactive" : "active",
       });
       if (!req.scope.allProjects) {
@@ -90,7 +95,14 @@ const saveProject = async (req, res) => {
     const renamed = project.name !== name;
     project.name = name;
     project.key = key;
-    if (req.body.code !== undefined) project.code = String(req.body.code || "").trim();
+    if (req.body.code !== undefined) {
+      const nextCode = String(req.body.code || "").trim().toUpperCase();
+      if (nextCode && nextCode !== project.code) {
+        const codeTaken = await Project.exists(tenantFilter(req, { code: nextCode, _id: { $ne: project._id } }));
+        if (codeTaken) return res.status(409).json({ message: "Project code already exists" });
+      }
+      project.code = nextCode;
+    }
     if (req.body.status) project.status = req.body.status === "inactive" ? "inactive" : "active";
     await project.save();
 

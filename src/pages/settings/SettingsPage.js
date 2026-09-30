@@ -36,7 +36,7 @@ export default function Settings() {
     setTheme(settings.theme || "day");
   }, [settings.theme]);
 
-  if (!hasPrivilege(privileges, "settings", "view") && roleKey !== "user") {
+  if (roleKey !== "platform_admin" && roleKey !== "super_admin" && !hasPrivilege(privileges, "settings", "view") && roleKey !== "user") {
     return <Navigate to="/" replace />;
   }
 

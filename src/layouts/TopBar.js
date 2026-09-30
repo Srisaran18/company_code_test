@@ -9,6 +9,7 @@ import { materialRequestHref } from "../features/workflow/workflow";
 import { userEditHref } from "../features/users/userRoutes";
 import { saveSettings } from "../store/directorySlice";
 import { api } from "../services/api";
+import { PlanChip } from "../pages/platform/planOptions";
 
 const demoNotifications = [];
 
@@ -63,6 +64,7 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
+  const company = useSelector((state) => state.auth.company);
   const role = useSelector((state) => state.auth.role);
   const privileges = useSelector((state) => state.auth.privileges);
   const users = useSelector((state) => state.directory.users);
@@ -202,17 +204,18 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
           {icons.menu}
         </button>
 
-        <div className="hidden min-w-[11rem] shrink-0 sm:block">
+        <div className="hidden w-max shrink-0 sm:block">
           <p className="text-sm font-semibold leading-tight">
             {greetingForNow(now)}, {firstName}
           </p>
           <p className="text-xs text-white/50">
             {formatDateLabel(now)} · {formatTimeLabel(now)}
           </p>
+          {roleKey === "super_admin" ? <PlanChip plan={company?.plan} className="mt-1" /> : null}
         </div>
 
         {showSearch ? (
-          <div ref={wrapRef} className="relative flex-1">
+          <div ref={wrapRef} className="relative min-w-0 flex-1">
             <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-brand-navy/40">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -265,6 +268,7 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
             <p className="text-xs text-white/50">
               {formatDateLabel(now)} · {formatTimeLabel(now)}
             </p>
+            {roleKey === "super_admin" ? <PlanChip plan={company?.plan} className="mt-1" /> : null}
           </div>
         )}
 
@@ -324,6 +328,18 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
 
           {profileOpen ? (
             <div className="absolute right-0 top-12 z-[70] w-56 overflow-hidden rounded-2xl border border-[rgba(15,42,68,0.1)] bg-white shadow-[0_16px_40px_rgba(15,42,68,0.14)]">
+              {roleKey === "super_admin" || roleKey === "platform_admin" || navItems.some((item) => item.key === "audits") ? (
+                <button
+                  type="button"
+                  className="flex w-full px-4 py-3 text-left text-sm font-medium text-brand-navy hover:bg-[#eef3f7]"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    navigate(roleKey === "platform_admin" ? "/platform/audits" : "/audits");
+                  }}
+                >
+                  Audit report
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="flex w-full px-4 py-3 text-left text-sm font-medium text-brand-navy hover:bg-[#eef3f7]"

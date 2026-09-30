@@ -22,12 +22,16 @@ import MaterialsPage from "../pages/materials/MaterialsPage";
 import ProjectsPage from "../pages/projects/ProjectsPage";
 import CompanySettingsPage from "../pages/company/CompanySettingsPage";
 import PlatformCompaniesPage from "../pages/platform/PlatformCompaniesPage";
+import PlatformCompanyDetailPage from "../pages/platform/PlatformCompanyDetailPage";
+import PlatformCompanyCreatePage from "../pages/platform/PlatformCompanyCreatePage";
+import PlatformAuditsPage from "../pages/platform/PlatformAuditsPage";
+import PlatformDashboardPage from "../pages/platform/PlatformDashboardPage";
 import { homePathForRole } from "../constants/nav";
 import { useSelector } from "react-redux";
 
 function HomeRedirect() {
   const roleKey = useSelector((state) => state.auth.role?.key);
-  if (roleKey === "platform_admin") return <Navigate to="/platform" replace />;
+  if (roleKey === "platform_admin") return <Navigate to="/platform/dashboard" replace />;
   if (roleKey === "user" || roleKey === "requestor" || roleKey === "requester") {
     return <Navigate to="/material-requests" replace />;
   }
@@ -115,6 +119,10 @@ export default function AppRoutes() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/company" element={<CompanySettingsPage />} />
           <Route path="/platform" element={<PlatformCompaniesPage />} />
+          <Route path="/platform/dashboard" element={<PlatformDashboardPage />} />
+          <Route path="/platform/new" element={<PlatformCompanyCreatePage />} />
+          <Route path="/platform/audits" element={<PlatformAuditsPage />} />
+          <Route path="/platform/:id" element={<PlatformCompanyDetailPage />} />
         </Route>
       </Route>
       <Route path="*" element={<HomeCatchAll />} />

@@ -20,7 +20,7 @@ function NavItem({ item, showLabels, onMobileClose, nested = false }) {
   return (
     <NavLink
       to={item.to}
-      end={item.to === "/"}
+      end={item.to === "/" || item.to === "/platform" || item.to === "/platform/dashboard"}
       title={item.label}
       onClick={() => {
         if (window.innerWidth < 1024) onMobileClose();

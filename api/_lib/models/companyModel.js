@@ -14,6 +14,17 @@ const companySettingsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const companyPlanSchema = new mongoose.Schema(
+  {
+    mode: { type: String, enum: ["demo", "subscription"] },
+    duration: { type: Number },
+    unit: { type: String, enum: ["days", "months"] },
+    startDate: { type: Date },
+    endDate: { type: Date },
+  },
+  { _id: false }
+);
+
 const companySchema = new mongoose.Schema(
   {
     code: { type: String, required: true, unique: true, trim: true, uppercase: true },
@@ -22,12 +33,19 @@ const companySchema = new mongoose.Schema(
     email: { type: String, trim: true, lowercase: true, default: "" },
     phone: { type: String, trim: true, default: "" },
     address: { type: String, trim: true, default: "" },
+    /** ISO 3166-1 alpha-2 code, e.g. "SA". */
     country: { type: String, trim: true, default: "" },
+    state: { type: String, trim: true, default: "" },
+    city: { type: String, trim: true, default: "" },
+    postalCode: { type: String, trim: true, default: "" },
+    taxNumber: { type: String, trim: true, default: "" },
     timezone: { type: String, trim: true, default: "UTC" },
     currency: { type: String, trim: true, uppercase: true, default: "USD" },
     logoUrl: { type: String, trim: true, default: "" },
     status: { type: String, enum: COMPANY_STATUSES, default: "active" },
     settings: { type: companySettingsSchema, default: () => ({}) },
+    /** Access window. Companies without a plan (created before plans existed) have no expiry. */
+    plan: { type: companyPlanSchema, default: undefined },
   },
   { timestamps: true }
 );

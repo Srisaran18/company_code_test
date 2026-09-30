@@ -19,7 +19,7 @@ async function logAudit({
       actorId: actor?.id || actor?._id?.toString?.() || "",
       actorName: actor?.name || "",
       actorEmail: actor?.email || "",
-      actorRole: actor?.role || "",
+      actorRole: actor?.isPlatformAdmin ? "platform_admin" : actor?.role || "",
       targetType,
       targetId: targetId ? String(targetId) : "",
       meta,
