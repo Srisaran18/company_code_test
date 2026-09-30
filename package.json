@@ -1,0 +1,64 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.12.0",
+    "@tanstack/react-table": "^8.21.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^13.5.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^2.0.10",
+    "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "mongoose": "^9.10.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-redux": "^9.3.0",
+    "react-router-dom": "^7.18.4",
+    "react-scripts": "5.0.1",
+    "recharts": "^3.10.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "node scripts/start.js",
+    "start:web": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "test:api": "node --test --test-concurrency=1 \"api/__tests__/*.test.js\"",
+    "migrate": "node scripts/migrate.js",
+    "create-platform-admin": "node scripts/createPlatformAdmin.js",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.6.1",
+    "mongodb-memory-server": "^11.3.0",
+    "postcss": "^8.5.28",
+    "supertest": "^7.3.0",
+    "tailwindcss": "^3.4.17"
+  }
+}

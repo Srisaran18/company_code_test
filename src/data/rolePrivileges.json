@@ -1,0 +1,84 @@
+{
+  "super_admin": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "create", "edit", "delete"],
+    "approvals": ["view", "approve", "reject"],
+    "procurement": ["view", "create", "edit"],
+    "purchase_orders": ["view", "create", "edit"],
+    "deliveries": ["view", "edit"],
+    "payments": ["view", "approve"],
+    "suppliers": ["view", "create", "edit", "delete"],
+    "users": ["view", "create", "edit", "delete"],
+    "roles": ["view", "create", "edit", "delete"],
+    "privileges": ["view", "create", "edit", "delete"],
+    "departments": ["view", "create", "edit", "delete"],
+    "materials": ["view", "create", "edit", "delete"],
+    "delete_requests": ["view", "approve", "reject"],
+    "reports": ["view", "export"],
+    "audits": ["view"],
+    "settings": ["view", "edit"]
+  },
+  "admin": {
+    "dashboard": ["view"],
+    "users": ["view", "create", "edit"],
+    "material_requests": ["view"],
+    "reports": ["view"],
+    "settings": ["view", "edit"]
+  },
+  "requestor": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "create", "edit"],
+    "settings": ["view", "edit"]
+  },
+  "user": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "create", "edit"],
+    "settings": ["view", "edit"]
+  },
+  "manager": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "edit"],
+    "approvals": ["view", "approve", "reject"],
+    "settings": ["view", "edit"]
+  },
+  "procurement": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "edit"],
+    "procurement": ["view", "create", "edit"],
+    "purchase_orders": ["view", "create", "edit"],
+    "suppliers": ["view", "create", "edit"],
+    "settings": ["view", "edit"]
+  },
+  "department_head": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "edit"],
+    "approvals": ["view", "approve", "reject"],
+    "reports": ["view"],
+    "settings": ["view", "edit"]
+  },
+  "finance": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "edit"],
+    "approvals": ["view", "approve", "reject"],
+    "payments": ["view", "approve"],
+    "reports": ["view", "export"],
+    "settings": ["view", "edit"]
+  },
+  "supplier": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "edit"],
+    "purchase_orders": ["view", "edit"],
+    "deliveries": ["view", "edit"],
+    "settings": ["view", "edit"]
+  },
+  "in_charge": {
+    "dashboard": ["view"],
+    "material_requests": ["view", "edit"],
+    "deliveries": ["view", "edit"],
+    "settings": ["view", "edit"]
+  },
+  "back_office": {
+    "materials": ["view", "create", "edit", "delete"],
+    "settings": ["view", "edit"]
+  }
+}

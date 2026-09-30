@@ -1,0 +1,392 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-blue: #0472df;
+  --brand-teal: #04a793;
+  --brand-navy: #0f2a44;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: #fff;
+}
+
+body {
+  margin: 0;
+  color: #243a4f;
+  font-family: Outfit, Inter, system-ui, sans-serif;
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 24px 60px rgba(8, 24, 40, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(28px) saturate(165%);
+  -webkit-backdrop-filter: blur(28px) saturate(165%);
+}
+
+.glass-soft {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.glass-blue {
+  background: #0472df;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 10px 28px rgba(4, 114, 223, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.mac-dock {
+  left: 0;
+  top: 4.75rem;
+  bottom: 0;
+  width: 17.5rem;
+  background: rgba(18, 28, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  transition:
+    transform 0.85s cubic-bezier(0.22, 0.61, 0.36, 1),
+    width 0.85s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.7s ease;
+}
+
+.mac-dock.is-open {
+  transform: translateX(0);
+}
+
+.mac-dock.is-closed {
+  transform: translateX(-105%);
+}
+
+.dock-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.85s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.45s ease;
+}
+
+.dock-label.is-shown,
+.mac-dock.is-pinned .dock-label {
+  max-width: 12.5rem;
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .mac-dock {
+    left: 0.5rem;
+    top: 5.5rem;
+    bottom: 0.75rem;
+    width: 4.35rem;
+    border-radius: 28px;
+    transform: none;
+  }
+
+  .mac-dock.is-closed,
+  .mac-dock.is-open {
+    transform: none;
+  }
+
+.mac-dock.is-pinned {
+  width: 16.5rem;
+}
+
+.mac-dock.is-icons .sidebar-scroll {
+  overflow: visible;
+}
+
+.mac-dock.is-pinned .sidebar-scroll,
+.mac-dock.is-open .sidebar-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.recharts-text {
+  fill: rgba(244, 251, 255, 0.62);
+  font-size: 12px;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+.theme-rest {
+  color: #243a4f;
+}
+
+.theme-rest .aurora {
+  background: #fff;
+}
+
+.theme-rest .glass {
+  background: #f7f9fb;
+  border: 1px solid rgba(15, 42, 68, 0.08);
+  box-shadow: 0 10px 28px rgba(15, 42, 68, 0.06);
+  color: #0f2a44;
+}
+
+.theme-rest .mac-dock {
+  background: rgba(247, 249, 251, 0.94);
+  border: 1px solid rgba(15, 42, 68, 0.1);
+  color: #0f2a44;
+  box-shadow: 0 12px 32px rgba(15, 42, 68, 0.08);
+}
+
+.theme-rest .glass-soft {
+  background: #eef3f7;
+  border: 1px solid rgba(15, 42, 68, 0.08);
+  color: #0f2a44;
+}
+
+.theme-rest .text-white,
+.theme-rest .text-white\/85,
+.theme-rest .text-white\/80,
+.theme-rest .text-white\/90 {
+  color: #0f2a44 !important;
+}
+
+.theme-rest .bg-brand-blue,
+.theme-rest .bg-brand-blue * {
+  color: #fff !important;
+}
+
+.theme-rest .bg-sky-500,
+.theme-rest .bg-sky-500 *,
+.theme-rest .bg-emerald-500,
+.theme-rest .bg-emerald-500 *,
+.theme-rest .bg-violet-500,
+.theme-rest .bg-violet-500 *,
+.theme-rest .bg-amber-500,
+.theme-rest .bg-amber-500 *,
+.theme-rest .bg-orange-500,
+.theme-rest .bg-orange-500 *,
+.theme-rest .bg-slate-500,
+.theme-rest .bg-slate-500 *,
+.theme-rest .bg-brand-teal,
+.theme-rest .bg-brand-teal *,
+.theme-rest .bg-red-500,
+.theme-rest .bg-red-500 *,
+.theme-rest .bg-red-700,
+.theme-rest .bg-red-700 *,
+.theme-rest .bg-emerald-700,
+.theme-rest .bg-emerald-700 * {
+  color: #fff !important;
+}
+
+.theme-rest .text-white\/75,
+.theme-rest .text-white\/70,
+.theme-rest .text-white\/65 {
+  color: #3d566c !important;
+}
+
+.theme-rest .text-white\/55,
+.theme-rest .text-white\/50,
+.theme-rest .text-white\/45,
+.theme-rest .text-white\/40 {
+  color: #5c7388 !important;
+}
+
+.theme-rest .text-sky-200 {
+  color: #0369a1 !important;
+}
+
+.theme-rest .text-amber-200 {
+  color: #b45309 !important;
+}
+
+.theme-rest .text-orange-200 {
+  color: #c2410c !important;
+}
+
+.theme-rest .text-red-200 {
+  color: #b91c1c !important;
+}
+
+.theme-rest .text-violet-200 {
+  color: #6d28d9 !important;
+}
+
+.theme-rest .border-white\/15,
+.theme-rest .border-white\/12,
+.theme-rest .border-white\/10,
+.theme-rest .border-white\/8,
+.theme-rest .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(15, 42, 68, 0.1) !important;
+}
+
+.theme-rest .bg-white\/12,
+.theme-rest .bg-white\/10,
+.theme-rest .bg-white\/8,
+.theme-rest .bg-white\/6,
+.theme-rest .bg-white\/5 {
+  background-color: rgba(15, 42, 68, 0.05) !important;
+}
+
+.theme-rest .hover\:bg-white\/10:hover,
+.theme-rest .hover\:bg-white\/6:hover,
+.theme-rest .hover\:bg-white\/8:hover {
+  background-color: rgba(15, 42, 68, 0.07) !important;
+}
+
+.theme-rest .recharts-text {
+  fill: #5c7388;
+}
+
+.theme-rest .recharts-cartesian-grid-horizontal line,
+.theme-rest .recharts-cartesian-grid-vertical line {
+  stroke: rgba(15, 42, 68, 0.08);
+}
+
+.theme-night {
+  color: #f4fbff;
+}
+
+.theme-night .aurora {
+  background: radial-gradient(circle at 20% 20%, #163554, #0b1724 55%, #071018);
+}
+
+.theme-night .glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f4fbff;
+}
+
+.theme-night .mac-dock {
+  background: rgba(18, 28, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f4fbff;
+}
+
+.theme-night .glass-soft {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4fbff;
+}
+
+/* Sidebar submenu flyout — theme-safe colors (avoids text-white remaps) */
+.nav-flyout {
+  background: #ffffff;
+  border: 1px solid rgba(15, 42, 68, 0.12);
+  box-shadow: 0 16px 40px rgba(15, 42, 68, 0.14);
+  color: #0f2a44;
+}
+
+.nav-flyout-title {
+  color: #5c7388;
+}
+
+.nav-flyout-item {
+  color: #0f2a44;
+}
+
+.nav-flyout-item:hover {
+  background: rgba(15, 42, 68, 0.06);
+}
+
+.nav-flyout-item.is-active {
+  background: #0472df;
+  color: #fff;
+}
+
+.nav-flyout-icon {
+  background: rgba(15, 42, 68, 0.06);
+  color: inherit;
+}
+
+.nav-flyout-item.is-active .nav-flyout-icon {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.theme-night .nav-flyout {
+  background: #132234;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  color: #f4fbff;
+}
+
+.theme-night .nav-flyout-title {
+  color: rgba(244, 251, 255, 0.45);
+}
+
+.theme-night .nav-flyout-item {
+  color: rgba(244, 251, 255, 0.85);
+}
+
+.theme-night .nav-flyout-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.theme-night .nav-flyout-item.is-active {
+  background: #0472df;
+  color: #fff;
+}
+
+.theme-night .nav-flyout-icon {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes field-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+.field-invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.28) !important;
+  background-color: #fff5f5 !important;
+}
+
+.field-shake {
+  animation: field-shake 0.42s ease;
+}
+
