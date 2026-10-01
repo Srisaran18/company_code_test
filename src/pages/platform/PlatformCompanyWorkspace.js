@@ -4,12 +4,13 @@ import CollapsiblePanel, { SectionToolbar, useCollapsibleSections } from "../../
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import AuditDetailDialog from "../../components/ui/AuditDetailDialog";
 import { fieldClass, ghostBtn, primaryBtn } from "../../components/ui/formStyles";
+import { generatePassword } from "../../utils/password";
 import { modules } from "../../constants/nav";
 import { countryName } from "../../constants/countries";
 import CompanyProfileFields, { ProfileField } from "./CompanyProfileFields";
 import { PLAN_OPTIONS, PlanPicker, planRange, planSummary, withPlanDates } from "./planOptions";
 
-const SECTION_IDS = ["details", "plan", "features", "audits"];
+const SECTION_IDS = ["details", "admin", "plan", "features", "audits"];
 
 export function toDateInput(value) {
   return value ? String(value).slice(0, 10) : "";
@@ -73,11 +74,15 @@ export default function PlatformCompanyWorkspace({
   onSaveFeatures,
   onSetStatus,
   onSavePlan,
+  onResetAdminPassword,
   onRefreshAudits,
   lockEmail = false,
 }) {
   const sections = useCollapsibleSections("platform.company.sections");
   const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [passwordDrafts, setPasswordDrafts] = useState({});
+  const [passwordError, setPasswordError] = useState("");
+  const [resettingId, setResettingId] = useState("");
   const [selectedAudit, setSelectedAudit] = useState(null);
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
   const [planDraft, setPlanDraft] = useState(() =>
@@ -105,6 +110,24 @@ export default function PlatformCompanyWorkspace({
         planForDates
       )
     );
+
+  const saveAdminPassword = async (admin) => {
+    const next = String(passwordDrafts[admin.id] || "").trim();
+    if (next.length < 6) {
+      setPasswordError("New password must be at least 6 characters.");
+      return;
+    }
+    setPasswordError("");
+    setResettingId(admin.id);
+    try {
+      await onResetAdminPassword(admin.id, next);
+      setPasswordDrafts((prev) => ({ ...prev, [admin.id]: "" }));
+    } catch (err) {
+      setPasswordError(err.message || "Could not update the password.");
+    } finally {
+      setResettingId("");
+    }
+  };
 
   return (
     <>
@@ -153,6 +176,67 @@ export default function PlatformCompanyWorkspace({
             </button>
           </div>
         </form>
+      </CollapsiblePanel>
+
+      <CollapsiblePanel
+        title="Super Admin password"
+        subtitle={admins.length ? admins.map((item) => item.email).join(", ") : "No Super Admin yet"}
+        open={sections.isOpen("admin")}
+        onToggle={() => sections.toggle("admin")}
+      >
+        {admins.length ? (
+          <div className="space-y-5">
+            <p className="text-sm text-white/55">
+              The stored password is a hash. If this person forgets it, type a new password below.
+              Saving replaces the hash, and they sign in with the new password.
+            </p>
+            {passwordError ? <p className="text-sm text-red-200">{passwordError}</p> : null}
+            {admins.map((admin) => (
+              <div key={admin.id} className="space-y-3 rounded-2xl bg-white/5 p-4">
+                <p className="text-sm font-semibold">
+                  {admin.name} <span className="font-normal text-white/55">({admin.email})</span>
+                </p>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm text-white/70">Password hash</span>
+                  <input className={`${fieldClass} font-mono text-xs`} value={admin.password || ""} readOnly />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm text-white/70">New password</span>
+                  <div className="flex gap-2">
+                    <input
+                      className={fieldClass}
+                      value={passwordDrafts[admin.id] || ""}
+                      minLength={6}
+                      autoComplete="new-password"
+                      onChange={(e) =>
+                        setPasswordDrafts((prev) => ({ ...prev, [admin.id]: e.target.value }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className={`${ghostBtn} shrink-0`}
+                      onClick={() =>
+                        setPasswordDrafts((prev) => ({ ...prev, [admin.id]: generatePassword(12) }))
+                      }
+                    >
+                      Generate
+                    </button>
+                    <button
+                      type="button"
+                      className={`${primaryBtn} shrink-0`}
+                      disabled={saving || resettingId === admin.id}
+                      onClick={() => saveAdminPassword(admin)}
+                    >
+                      {resettingId === admin.id ? "Saving..." : "Update password"}
+                    </button>
+                  </div>
+                </label>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-white/50">No Super Admin user has been created yet.</p>
+        )}
       </CollapsiblePanel>
 
       <CollapsiblePanel

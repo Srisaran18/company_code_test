@@ -450,7 +450,7 @@ describe("Platform vs company administration", () => {
         name: "New Co",
         features: ["material_requests"],
         plan: { mode: "subscription", duration: 12 },
-        admin: { email: "boss@newco.test" },
+        admin: { email: "boss@newco.test", name: "Boss", password: "secret123" },
       });
     assert.equal(res.status, 201, JSON.stringify(res.body));
     const roles = await Role.find({ companyId: res.body.company.id });
@@ -503,7 +503,24 @@ describe("Platform vs company administration", () => {
 
     const detail = await as(ctx.platform).get(`/platform/companies/${res.body.company.id}`);
     assert.equal(detail.status, 200);
-    assert.ok(detail.body.admins.some((item) => item.email === "boss2@newco.test"));
+    const admin = detail.body.admins.find((item) => item.email === "boss2@newco.test");
+    assert.ok(admin);
+    assert.match(admin.password, /^\$2[aby]\$/);
+
+    const reset = await as(ctx.platform)
+      .put(`/platform/companies/${res.body.company.id}/admins/${admin.id}/password`)
+      .send({ password: "changed1" });
+    assert.equal(reset.status, 200, JSON.stringify(reset.body));
+    assert.match(reset.body.admin.password, /^\$2[aby]\$/);
+    assert.notEqual(reset.body.admin.password, admin.password);
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: "boss2@newco.test", password: "changed1" });
+    assert.equal(login.status, 200, JSON.stringify(login.body));
+    const tooShort = await as(ctx.platform)
+      .put(`/platform/companies/${res.body.company.id}/admins/${admin.id}/password`)
+      .send({ password: "abc" });
+    assert.equal(tooShort.status, 400);
     const material = detail.body.features.find((item) => item.key === "material_requests");
     assert.ok(material.modules.some((item) => item.key === "material_requests"));
 
@@ -527,7 +544,11 @@ describe("Platform vs company administration", () => {
 
     const res = await as(ctx.platform)
       .post("/platform/companies")
-      .send({ name: "Demo Plan Co", plan: { mode: "demo", duration: 15 } });
+      .send({
+        name: "Demo Plan Co",
+        plan: { mode: "demo", duration: 15 },
+        admin: { name: "Demo Boss", email: "demoplan@newco.test", password: "secret123" },
+      });
     assert.equal(res.status, 201, JSON.stringify(res.body));
     assert.equal(res.body.company.plan.mode, "demo");
     assert.equal(res.body.company.plan.unit, "days");

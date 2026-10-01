@@ -7,6 +7,7 @@ import CollapsiblePanel, { SectionToolbar, useCollapsibleSections } from "../../
 import { fieldClass, ghostBtn, primaryBtn } from "../../components/ui/formStyles";
 import CompanyProfileFields, { ProfileField, profilePayload } from "./CompanyProfileFields";
 import { PLAN_OPTIONS, PlanPicker } from "./planOptions";
+import { generatePassword } from "../../utils/password";
 
 const SECTION_IDS = ["details", "plan", "admin"];
 
@@ -26,6 +27,7 @@ const emptyForm = {
   phone: "",
   adminName: "",
   adminEmail: "",
+  adminPassword: generatePassword(12),
   plan: { mode: "demo", duration: 5 },
 };
 
@@ -56,6 +58,11 @@ export default function PlatformCompanyCreatePage() {
   const onSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    if (!form.adminName.trim() || !form.adminEmail.trim() || String(form.adminPassword || "").trim().length < 6) {
+      if (!sections.isOpen("admin")) sections.toggle("admin");
+      setError("Super Admin name, email, and password are required.");
+      return;
+    }
     setSaving(true);
     try {
       const data = await api.post("/platform/companies", {
@@ -63,16 +70,17 @@ export default function PlatformCompanyCreatePage() {
         code: form.code,
         plan: form.plan,
         features: catalog.filter((item) => item.alwaysOn).map((item) => item.key),
-        admin: form.adminEmail ? { email: form.adminEmail, name: form.adminName } : undefined,
+        admin: form.adminEmail
+          ? { email: form.adminEmail, name: form.adminName, password: form.adminPassword }
+          : undefined,
       });
       navigate(`/platform/${data.company.id}`, {
         replace: true,
         state: {
-          message: data.adminPasswordEmailed
-            ? `Company created. Admin password was sent to ${form.adminEmail}.`
-            : data.adminPassword
-              ? `Company created. Admin password (shown once): ${data.adminPassword}`
-              : "Company created.",
+          message: "Company created.",
+          adminPassword: data.adminPassword || "",
+          adminEmail: form.adminEmail,
+          adminPasswordEmailed: data.adminPasswordEmailed === true,
         },
       });
     } catch (err) {
@@ -137,25 +145,46 @@ export default function PlatformCompanyCreatePage() {
 
         <CollapsiblePanel
           title="First Super Admin"
-          subtitle={form.adminEmail || "Optional"}
+          subtitle={form.adminEmail ? `${form.adminEmail} · ${form.adminPassword}` : "Required"}
           open={sections.isOpen("admin")}
           onToggle={() => sections.toggle("admin")}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <ProfileField label="Name">
+            <ProfileField label="Name" hint="(required)">
               <input
                 className={fieldClass}
                 value={form.adminName}
+                required
                 onChange={(e) => setForm({ ...form, adminName: e.target.value })}
               />
             </ProfileField>
-            <ProfileField label="Email" hint="(password is emailed here)">
+            <ProfileField label="Email" hint="(required)">
               <input
                 className={fieldClass}
                 type="email"
                 value={form.adminEmail}
+                required
                 onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
               />
+            </ProfileField>
+            <ProfileField label="Password" hint="(required, auto-generated)">
+              <div className="flex gap-2">
+                <input
+                  className={fieldClass}
+                  value={form.adminPassword}
+                  required
+                  minLength={6}
+                  autoComplete="off"
+                  onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className={`${ghostBtn} shrink-0`}
+                  onClick={() => setForm({ ...form, adminPassword: generatePassword(12) })}
+                >
+                  Generate
+                </button>
+              </div>
             </ProfileField>
           </div>
         </CollapsiblePanel>

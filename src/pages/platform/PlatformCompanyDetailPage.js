@@ -17,6 +17,9 @@ export default function PlatformCompanyDetailPage() {
   const [audits, setAudits] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState(location.state?.message || "");
+  const createdPassword = location.state?.adminPassword || "";
+  const createdEmail = location.state?.adminEmail || "";
+  const passwordEmailed = location.state?.adminPasswordEmailed === true;
   const [saving, setSaving] = useState(false);
   const [loadingAudits, setLoadingAudits] = useState(true);
   const showCompany = (company) => {
@@ -104,6 +107,13 @@ export default function PlatformCompanyDetailPage() {
     }
   };
 
+  const resetAdminPassword = async (userId, password) => {
+    const data = await api.put(`/platform/companies/${id}/admins/${userId}/password`, { password });
+    setAdmins((list) => list.map((item) => (item.id === userId ? data.admin : item)));
+    setMessage(`Password updated for ${data.admin?.email || "Super Admin"}. They sign in with the new password.`);
+    await loadAudits();
+  };
+
   const saveFeatures = async () => {
     setError("");
     setSaving(true);
@@ -135,6 +145,17 @@ export default function PlatformCompanyDetailPage() {
       </PageIntro>
       {error ? <p className="text-sm text-red-200">{error}</p> : null}
       {message ? <p className="text-sm font-medium text-brand-teal">{message}</p> : null}
+      {createdPassword ? (
+        <div className="rounded-2xl border border-brand-teal/40 bg-brand-teal/10 p-4">
+          <p className="text-sm font-semibold">Generated Super Admin password</p>
+          <p className="mt-2 font-mono text-lg tracking-wide">{createdPassword}</p>
+          <p className="mt-2 text-sm text-white/65">
+            {passwordEmailed
+              ? `A copy was also sent to ${createdEmail}. Keep this password — it is shown only now.`
+              : `Email was not delivered${createdEmail ? ` to ${createdEmail}` : ""}. Sign in with this password. It is shown only now.`}
+          </p>
+        </div>
+      ) : null}
 
       {!company ? (
         <p className="text-sm text-white/50">Loading…</p>
@@ -152,6 +173,7 @@ export default function PlatformCompanyDetailPage() {
           onSaveFeatures={saveFeatures}
           onSetStatus={setStatus}
           onSavePlan={savePlan}
+          onResetAdminPassword={resetAdminPassword}
           onRefreshAudits={loadAudits}
           lockEmail
         />

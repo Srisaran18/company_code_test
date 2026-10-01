@@ -57,12 +57,15 @@ async function applyPlanToFeatures(companyId, plan) {
 }
 
 async function companyAdmins(companyId) {
-  const admins = await User.find({ companyId, role: "super_admin" }).select("name email active").sort({ name: 1 });
+  const admins = await User.find({ companyId, role: "super_admin" })
+    .select("name email active password")
+    .sort({ name: 1 });
   return admins.map((item) => ({
     id: item._id.toString(),
     name: item.name,
     email: item.email,
     active: item.active !== false,
+    password: item.password || "",
   }));
 }
 
@@ -112,8 +115,15 @@ const createCompany = async (req, res) => {
     if (!/^\d{2,20}$/.test(code)) throw httpError(400, "Company code must be 2-20 digits");
     if (await Company.exists({ code })) throw httpError(409, "Company code already exists");
     const plan = buildPlan(req.body.plan);
-    const admin = req.body.admin || null;
-    if (admin?.email && (await User.exists({ email: String(admin.email).toLowerCase().trim() }).unscoped())) {
+    const admin = req.body.admin || {};
+    const adminName = String(admin.name || "").trim();
+    const adminEmail = String(admin.email || "").toLowerCase().trim();
+    if (!adminName) throw httpError(400, "Super Admin name is required");
+    if (!adminEmail) throw httpError(400, "Super Admin email is required");
+    if (admin.password && String(admin.password).length < 6) {
+      throw httpError(400, "Super Admin password must be at least 6 characters");
+    }
+    if (await User.exists({ email: adminEmail }).unscoped()) {
       throw httpError(409, "Admin email already in use");
     }
 
@@ -127,11 +137,11 @@ const createCompany = async (req, res) => {
 
     let adminPassword = null;
     let adminPasswordEmailed = false;
-    if (admin?.email) {
+    if (adminEmail) {
       adminPassword = admin.password && String(admin.password).length >= 6 ? admin.password : generatePassword(12);
       const adminUser = {
-        name: admin.name || "Company Admin",
-        email: String(admin.email).toLowerCase().trim(),
+        name: adminName,
+        email: adminEmail,
       };
       await User.create({
         companyId: company._id,
@@ -159,7 +169,7 @@ const createCompany = async (req, res) => {
       company: toPublicCompany(company),
       features: await companyFeatures(company._id),
       admins: await companyAdmins(company._id),
-      adminPassword: adminPasswordEmailed ? undefined : adminPassword,
+      adminPassword,
       adminPasswordEmailed,
     });
   } catch (error) {
@@ -512,11 +522,43 @@ const listAllAudits = async (req, res) => {
   }
 };
 
+/** Replaces a company Super Admin password. The stored value is always the bcrypt hash. */
+const resetAdminPassword = async (req, res) => {
+  try {
+    const company = await loadCompany(req.params.id);
+    if (!isValidId(req.params.userId)) throw httpError(404, "Super Admin not found");
+    const password = String(req.body.password || "");
+    if (password.length < 6) throw httpError(400, "Password must be at least 6 characters");
+    const user = await User.findOne({
+      _id: toId(req.params.userId),
+      companyId: company._id,
+      role: "super_admin",
+    });
+    if (!user) throw httpError(404, "Super Admin not found");
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+    await logAudit({
+      action: "update",
+      module: "platform",
+      summary: `Reset Super Admin password for ${user.email} (${company.code})`,
+      actor: req.user,
+      companyId: null,
+      targetType: "user",
+      targetId: user._id.toString(),
+    });
+    const admin = (await companyAdmins(company._id)).find((item) => item.id === user._id.toString());
+    res.status(200).json({ message: "Password updated", admin });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 module.exports = {
   listCompanies,
   getCompany,
   createCompany,
   updateCompany,
+  resetAdminPassword,
   setFeatures,
   listFeatures,
   updateFeature,

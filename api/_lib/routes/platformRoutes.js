@@ -5,6 +5,7 @@ const {
   getCompany,
   createCompany,
   updateCompany,
+  resetAdminPassword,
   setFeatures,
   listFeatures,
   updateFeature,
@@ -22,6 +23,7 @@ router.get("/dashboard", getDashboard);
 router.get("/audits", listAllAudits);
 router.get("/companies/:id", getCompany);
 router.put("/companies/:id", updateCompany);
+router.put("/companies/:id/admins/:userId/password", resetAdminPassword);
 router.put("/companies/:id/features", setFeatures);
 router.get("/companies/:id/audits", listCompanyAudits);
 router.get("/features", listFeatures);
