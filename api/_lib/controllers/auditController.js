@@ -12,6 +12,8 @@ function toPublic(record) {
     actorRole: record.actorRole || "",
     targetType: record.targetType || "",
     targetId: record.targetId || "",
+    ip: record.ip || record.meta?.ip || "",
+    userAgent: record.userAgent || record.meta?.userAgent || "",
     meta: record.meta || {},
     createdAt: record.createdAt,
     date: record.createdAt

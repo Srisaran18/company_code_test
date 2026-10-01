@@ -4,6 +4,10 @@ process.env.JWT_SECRET = process.env.JWT_SECRET_TEST || "test-secret";
 process.env.SERVHUB_NO_LISTEN = "true";
 process.env.SEED_DEMO_DATA = "false";
 process.env.NODE_ENV = "test";
+// Keep the suite off the real mailbox. dotenv will not override these.
+process.env.SMTP_HOST = "";
+process.env.SMTP_USER = "";
+process.env.SMTP_PASS = "";
 
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");

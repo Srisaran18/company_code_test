@@ -17,7 +17,7 @@ export const modules = {
   delete_requests: { to: "/delete-requests", label: "Delete Requests", icon: "trash" },
   reports: { to: "/reports", label: "Reports", icon: "chart" },
   settings: { to: "/settings", label: "Settings", icon: "cog" },
-  company_settings: { to: "/company", label: "Company", icon: "building" },
+  company_settings: { to: "/company", label: "Company Settings", icon: "building" },
   audits: { to: "/audits", label: "Audit report", icon: "list" },
 };
 
@@ -71,14 +71,21 @@ const SUPER_ADMIN_ORDER = [
 
 const REQUESTOR_MENU_KEYS = ["material_requests", "attendance", "settings"];
 
+const FEATURE_FALLBACK = {
+  company_settings: "company_settings",
+  dashboard: "core",
+  settings: "core",
+};
+
 /**
  * Menu visibility follows the company's subscription (UX only; the API enforces it).
  * `catalog` is the server's permission catalog: { moduleKey: { feature, actions } }.
  */
 export function isModuleEnabled(key, features, catalog) {
-  if (!Array.isArray(features) || !features.length) return true;
-  const feature = catalog?.[key]?.feature;
-  return !feature || features.includes(feature);
+  const feature = catalog?.[key]?.feature || FEATURE_FALLBACK[key];
+  if (!feature) return true;
+  if (!Array.isArray(features) || !features.length) return feature === "core";
+  return features.includes(feature);
 }
 
 function canViewModule(key, privileges, roleKey, features, catalog) {

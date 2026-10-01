@@ -14,6 +14,8 @@ const auditSchema = new mongoose.Schema(
     actorRole: { type: String, trim: true, default: "" },
     targetType: { type: String, trim: true, default: "" },
     targetId: { type: String, trim: true, default: "" },
+    ip: { type: String, trim: true, default: "" },
+    userAgent: { type: String, trim: true, default: "" },
     meta: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }

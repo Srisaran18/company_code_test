@@ -24,8 +24,10 @@ const auditRoutes = require("./routes/auditRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const companyRoutes = require("./routes/companyRoutes");
 const platformRoutes = require("./routes/platformRoutes");
+const { bindAuditRequest } = require("./utils/audit");
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(
   cors({
@@ -38,6 +40,7 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => bindAuditRequest(req, next));
 
 let dbReady = null;
 function ensureDb() {

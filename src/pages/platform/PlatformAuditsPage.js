@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
 import { api } from "../../services/api";
 import DataTable from "../../components/ui/DataTable";
+import AuditDetailDialog from "../../components/ui/AuditDetailDialog";
 import GlassPanel, { PageIntro } from "../../components/ui/GlassPanel";
 import { fieldClass, ghostBtn, primaryBtn } from "../../components/ui/formStyles";
 
@@ -15,6 +16,7 @@ const columns = [
   { accessorKey: "summary", header: "Summary" },
   { accessorKey: "actorName", header: "Name" },
   { accessorKey: "actorEmail", header: "Email" },
+  { accessorKey: "ip", header: "IP" },
 ];
 
 const emptyFilters = {
@@ -66,6 +68,7 @@ export default function PlatformAuditsPage() {
   const [draft, setDraft] = useState(emptyFilters.q);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
 
   const load = async (nextFilters = filters) => {
     setLoading(true);
@@ -127,8 +130,8 @@ export default function PlatformAuditsPage() {
     <div className="flex min-h-[calc(100vh-6.5rem)] flex-col gap-4">
       <PageIntro kicker="Platform" title="Audit report">
         <p className="mt-1 text-sm text-white/55">
-          Filter by company or platform admin. Smart search accepts a company name, a code, or
-          “platform”.
+          Filter by company or platform admin. Click a row for the full record, including the IP
+          it was accessed from. Smart search accepts a company name, a code, “platform”, or an IP.
         </p>
       </PageIntro>
 
@@ -228,9 +231,17 @@ export default function PlatformAuditsPage() {
         {loading ? (
           <p className="text-sm text-white/55">Loading audits…</p>
         ) : (
-          <DataTable columns={columns} data={audits} searchPlaceholder="Filter these results" pageSize={15} fillHeight />
+          <DataTable
+            columns={columns}
+            data={audits}
+            searchPlaceholder="Filter these results"
+            pageSize={15}
+            fillHeight
+            onRowClick={setSelected}
+          />
         )}
       </GlassPanel>
+      <AuditDetailDialog audit={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

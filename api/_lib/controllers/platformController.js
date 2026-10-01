@@ -478,6 +478,8 @@ const listAllAudits = async (req, res) => {
           { action: pattern },
           { module: pattern },
           { actorRole: pattern },
+          { ip: pattern },
+          { userAgent: pattern },
           ...(matchingIds.length ? [{ companyId: { $in: matchingIds } }] : []),
         ],
       });

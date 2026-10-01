@@ -24,6 +24,7 @@ function countBy(list, key) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const company = useSelector((state) => state.auth.company);
   const role = useSelector((state) => state.auth.role);
   const privileges = useSelector((state) => state.auth.privileges);
   const users = useSelector((state) => state.directory.users);
@@ -150,7 +151,7 @@ export default function Dashboard() {
         <div>
           <p className="text-sm font-medium text-brand-teal">{role?.name}</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">
-            {greetingForNow(now)}, {firstName}
+            {isSuperAdmin ? company?.name || "Company" : `${greetingForNow(now)}, ${firstName}`}
           </h1>
           <p className="mt-1 text-sm text-white/55">
             {formatDateLabel(now)} · {formatTimeLabel(now)}

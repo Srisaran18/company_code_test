@@ -116,8 +116,13 @@ body {
   width: 16.5rem;
 }
 
+.mac-dock.is-icons {
+  overflow: hidden;
+}
+
 .mac-dock.is-icons .sidebar-scroll {
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .mac-dock.is-pinned .sidebar-scroll,

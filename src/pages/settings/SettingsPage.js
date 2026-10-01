@@ -7,6 +7,7 @@ import { icons } from "../../components/icons";
 import { api } from "../../services/api";
 import { saveSettings } from "../../store/directorySlice";
 import { hasPrivilege } from "../../constants/privileges";
+import { isModuleEnabled } from "../../constants/nav";
 
 const THEMES = [
   { id: "day", label: "Day", icon: "sun" },
@@ -21,7 +22,11 @@ export default function Settings() {
   const user = useSelector((state) => state.auth.user);
   const settings = useSelector((state) => state.directory.settings);
   const company = useSelector((state) => state.auth.company);
-  const canManageCompany = roleKey === "super_admin" || hasPrivilege(privileges, "company_settings", "view");
+  const features = useSelector((state) => state.auth.features);
+  const catalog = useSelector((state) => state.auth.permissionCatalog);
+  const companySettingsOn = isModuleEnabled("company_settings", features, catalog);
+  const canManageCompany =
+    companySettingsOn && (roleKey === "super_admin" || hasPrivilege(privileges, "company_settings", "view"));
   const isUser = roleKey === "user" || roleKey === "requestor" || roleKey === "requester";
   const [theme, setTheme] = useState(settings.theme || "day");
   const [passwordForm, setPasswordForm] = useState({
@@ -155,7 +160,7 @@ export default function Settings() {
         </div>
       </GlassPanel>
 
-      {!isUser && company ? (
+      {!isUser && company && companySettingsOn ? (
         <GlassPanel as="article" className="p-6">
           <h2 className="text-lg font-semibold">Organization</h2>
           <p className="mt-2 text-sm text-white/70">

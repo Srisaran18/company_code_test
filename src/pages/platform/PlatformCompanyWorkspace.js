@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import DataTable from "../../components/ui/DataTable";
 import CollapsiblePanel, { SectionToolbar, useCollapsibleSections } from "../../components/ui/CollapsiblePanel";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import AuditDetailDialog from "../../components/ui/AuditDetailDialog";
 import { fieldClass, ghostBtn, primaryBtn } from "../../components/ui/formStyles";
 import { modules } from "../../constants/nav";
 import { countryName } from "../../constants/countries";
@@ -56,6 +57,7 @@ const auditColumns = [
   { accessorKey: "actorName", header: "Name" },
   { accessorKey: "actorEmail", header: "Email" },
   { accessorKey: "actorRole", header: "Role" },
+  { accessorKey: "ip", header: "IP" },
 ];
 
 export default function PlatformCompanyWorkspace({
@@ -76,6 +78,7 @@ export default function PlatformCompanyWorkspace({
 }) {
   const sections = useCollapsibleSections("platform.company.sections");
   const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [selectedAudit, setSelectedAudit] = useState(null);
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
   const [planDraft, setPlanDraft] = useState(() =>
     company.plan?.mode
@@ -332,9 +335,17 @@ export default function PlatformCompanyWorkspace({
         {loadingAudits ? (
           <p className="text-sm text-white/55">Loading audits…</p>
         ) : (
-          <DataTable columns={auditColumns} data={audits} searchPlaceholder="Filter this company" pageSize={10} />
+          <DataTable
+            columns={auditColumns}
+            data={audits}
+            searchPlaceholder="Filter this company"
+            pageSize={10}
+            onRowClick={setSelectedAudit}
+          />
         )}
       </CollapsiblePanel>
+
+      <AuditDetailDialog audit={selectedAudit} onClose={() => setSelectedAudit(null)} />
 
       <ConfirmDialog
         open={confirmSuspend}

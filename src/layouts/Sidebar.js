@@ -57,6 +57,8 @@ function NavGroup({ item, showLabels, onMobileClose }) {
   const location = useLocation();
   const navigate = useNavigate();
   const closeTimer = useRef(null);
+  const buttonRef = useRef(null);
+  const [flyoutPos, setFlyoutPos] = useState(null);
   const childActive = item.children.some(
     (child) =>
       location.pathname === child.to || location.pathname.startsWith(`${child.to}/`)
@@ -77,11 +79,30 @@ function NavGroup({ item, showLabels, onMobileClose }) {
     []
   );
 
+  useEffect(() => {
+    if (!flyoutOpen) return undefined;
+    const scroller = buttonRef.current?.closest(".sidebar-scroll");
+    const onScroll = () => setFlyoutOpen(false);
+    scroller?.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      scroller?.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [flyoutOpen]);
+
   const iconsOnly = !showLabels;
+
+  const placeFlyout = () => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setFlyoutPos({ top: Math.max(12, rect.top), left: rect.right + 8 });
+  };
 
   const openFlyout = () => {
     if (!iconsOnly) return;
     if (closeTimer.current) clearTimeout(closeTimer.current);
+    placeFlyout();
     setFlyoutOpen(true);
   };
 
@@ -98,6 +119,7 @@ function NavGroup({ item, showLabels, onMobileClose }) {
       onMouseLeave={scheduleCloseFlyout}
     >
       <button
+        ref={buttonRef}
         type="button"
         title={item.label}
         onClick={() => {
@@ -140,7 +162,8 @@ function NavGroup({ item, showLabels, onMobileClose }) {
 
       {iconsOnly && flyoutOpen ? (
         <div
-          className="absolute left-full top-0 z-50 pl-2"
+          className="fixed z-50"
+          style={{ top: flyoutPos?.top ?? 0, left: flyoutPos?.left ?? 0 }}
           onMouseEnter={openFlyout}
           onMouseLeave={scheduleCloseFlyout}
         >
@@ -195,7 +218,7 @@ export default function Sidebar({ items, pinned, onTogglePin, visible, mobileOpe
       ) : null}
 
       <aside
-        className={`mac-dock fixed z-40 flex flex-col overflow-visible text-white ${
+        className={`mac-dock fixed z-40 flex flex-col overflow-hidden text-white ${
           pinned ? "is-pinned" : "is-icons"
         } ${mobileOpen ? "is-open" : "is-closed"}`}
       >
@@ -223,7 +246,7 @@ export default function Sidebar({ items, pinned, onTogglePin, visible, mobileOpe
           ) : null}
         </div>
 
-        <nav className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-visible px-2.5 pb-2.5">
+        <nav className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden px-2.5 pb-2.5">
           {items.map((item) =>
             item.children?.length ? (
               <NavGroup

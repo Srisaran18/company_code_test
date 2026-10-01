@@ -77,6 +77,8 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
   const navItems = flattenNavItems(getNavItems(privileges, roleKey, features, catalog));
   const showSearch = roleKey !== "user" && roleKey !== "requestor" && roleKey !== "requester";
   const firstName = user?.name?.split(" ")[0] || "there";
+  const heading = roleKey === "super_admin" ? company?.name || "Company" : `${greetingForNow(now)}, ${firstName}`;
+  const planMissing = roleKey !== "platform_admin" && Boolean(company) && !company.plan?.mode;
   const initials = user?.name
     ?.split(" ")
     .map((part) => part[0])
@@ -184,29 +186,33 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
   return (
     <header className="glass fixed top-0 left-0 right-0 z-50 rounded-none border-x-0 border-t-0">
       <div className="flex items-center gap-3 px-4 py-3 lg:px-5">
-        <button
-          type="button"
-          className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-white shadow-[0_8px_20px_rgba(4,114,223,0.35)] hover:bg-brand-blue-dark lg:inline-flex"
-          onClick={onToggleNav}
-          aria-pressed={navVisible}
-          aria-label={navVisible ? "Hide navigation" : "Show navigation"}
-          title={navVisible ? "Hide navigation" : "Show navigation"}
-        >
-          {icons.waffle}
-        </button>
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white/80 lg:hidden"
-          onClick={onMenu}
-          aria-pressed={navOpen}
-          aria-label={navOpen ? "Close navigation" : "Open navigation"}
-        >
-          {icons.menu}
-        </button>
+        {planMissing ? null : (
+          <button
+            type="button"
+            className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-white shadow-[0_8px_20px_rgba(4,114,223,0.35)] hover:bg-brand-blue-dark lg:inline-flex"
+            onClick={onToggleNav}
+            aria-pressed={navVisible}
+            aria-label={navVisible ? "Hide navigation" : "Show navigation"}
+            title={navVisible ? "Hide navigation" : "Show navigation"}
+          >
+            {icons.waffle}
+          </button>
+        )}
+        {planMissing ? null : (
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-white/80 lg:hidden"
+            onClick={onMenu}
+            aria-pressed={navOpen}
+            aria-label={navOpen ? "Close navigation" : "Open navigation"}
+          >
+            {icons.menu}
+          </button>
+        )}
 
         <div className="hidden w-max shrink-0 sm:block">
           <p className="text-sm font-semibold leading-tight">
-            {greetingForNow(now)}, {firstName}
+            {heading}
           </p>
           <p className="text-xs text-white/50">
             {formatDateLabel(now)} · {formatTimeLabel(now)}
@@ -263,7 +269,7 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
         ) : (
           <div className="flex-1 sm:hidden">
             <p className="text-sm font-semibold leading-tight">
-              {greetingForNow(now)}, {firstName}
+              {heading}
             </p>
             <p className="text-xs text-white/50">
               {formatDateLabel(now)} · {formatTimeLabel(now)}
@@ -328,6 +334,18 @@ export default function TopBar({ onMenu, navOpen, navVisible, onToggleNav }) {
 
           {profileOpen ? (
             <div className="absolute right-0 top-12 z-[70] w-56 overflow-hidden rounded-2xl border border-[rgba(15,42,68,0.1)] bg-white shadow-[0_16px_40px_rgba(15,42,68,0.14)]">
+              {navItems.some((item) => item.key === "company_settings") ? (
+                <button
+                  type="button"
+                  className="flex w-full px-4 py-3 text-left text-sm font-medium text-brand-navy hover:bg-[#eef3f7]"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    navigate("/company");
+                  }}
+                >
+                  Company Settings
+                </button>
+              ) : null}
               {roleKey === "super_admin" || roleKey === "platform_admin" || navItems.some((item) => item.key === "audits") ? (
                 <button
                   type="button"

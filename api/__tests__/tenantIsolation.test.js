@@ -407,6 +407,26 @@ describe("Platform vs company administration", () => {
     assert.equal(platformRes.status, 403);
   });
 
+  test("Company Settings is blocked for Super Admin when the feature is off", async () => {
+    const off = await as(ctx.platform)
+      .put(`/platform/companies/${ctx.C._id}/features`)
+      .send({ features: [{ key: "company_settings", enabled: false }] });
+    assert.equal(off.status, 200);
+    const denied = await as(ctx.adminC).get("/company");
+    assert.equal(denied.status, 403);
+    assert.equal(denied.body.code, "FEATURE_NOT_ENABLED");
+    const meOff = await as(ctx.adminC).get("/auth/me");
+    assert.ok(!meOff.body.features.includes("company_settings"));
+
+    const on = await as(ctx.platform)
+      .put(`/platform/companies/${ctx.C._id}/features`)
+      .send({ features: [{ key: "company_settings", enabled: true }] });
+    assert.equal(on.status, 200);
+    assert.equal((await as(ctx.adminC).get("/company")).status, 200);
+    const meOn = await as(ctx.adminC).get("/auth/me");
+    assert.ok(meOn.body.features.includes("company_settings"));
+  });
+
   test("platform admin toggles features and suspends companies", async () => {
     const enable = await as(ctx.platform)
       .put(`/platform/companies/${ctx.C._id}/features`)
@@ -437,6 +457,35 @@ describe("Platform vs company administration", () => {
     assert.ok(roles.some((item) => item.key === "super_admin" && item.isSystemRole));
     assert.ok(res.body.adminPassword);
     assert.equal(res.body.adminPasswordEmailed, false);
+  });
+
+  test("company creation returns the password when SMTP is unset", async () => {
+    const previous = {
+      SMTP_HOST: process.env.SMTP_HOST,
+      SMTP_USER: process.env.SMTP_USER,
+      SMTP_PASS: process.env.SMTP_PASS,
+    };
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_USER;
+    delete process.env.SMTP_PASS;
+    try {
+      const res = await as(ctx.platform)
+        .post("/platform/companies")
+        .send({
+          name: "No Mail Co",
+          plan: { mode: "demo", duration: 5 },
+          admin: { email: "nomail@newco.test", name: "No Mail" },
+        });
+      assert.equal(res.status, 201, JSON.stringify(res.body));
+      assert.equal(res.body.adminPasswordEmailed, false);
+      assert.equal(typeof res.body.adminPassword, "string");
+      assert.ok(res.body.adminPassword.length >= 6);
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
   });
 
   test("platform generates a company code and returns that company's audits", async () => {
@@ -538,6 +587,17 @@ describe("Platform vs company administration", () => {
 
     const search = await as(ctx.platform).get("/platform/audits?q=COA");
     assert.equal(search.status, 200);
+  });
+
+  test("login audits record the access IP", async () => {
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .set("X-Forwarded-For", "203.0.113.10")
+      .send({ email: "platform@servhub.test", password: "secret123" });
+    assert.equal(login.status, 200, JSON.stringify(login.body));
+    const audits = await as(ctx.platform).get("/platform/audits?q=203.0.113.10");
+    assert.equal(audits.status, 200);
+    assert.ok(audits.body.audits.some((item) => item.ip === "203.0.113.10" && item.action === "login"));
   });
 
   test("project code defaults from the project name", async () => {
