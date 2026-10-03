@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, Navigate } from "react-router-dom";
 import GlassPanel, { PageIntro } from "../../components/ui/GlassPanel";
-import { fieldClass, primaryBtn } from "../../components/ui/formStyles";
+import { fieldClass, ghostBtn, primaryBtn } from "../../components/ui/formStyles";
 import { icons } from "../../components/icons";
 import { api } from "../../services/api";
 import { saveSettings } from "../../store/directorySlice";
@@ -14,6 +14,83 @@ const THEMES = [
   { id: "night", label: "Night", icon: "moon" },
   { id: "system", label: "System", icon: "system" },
 ];
+
+function SignaturePad({ onDraw }) {
+  const canvasRef = useRef(null);
+  const drawing = useRef(false);
+  const moved = useRef(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#0f2a44";
+  }, []);
+
+  const point = (event) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const src = event.touches ? event.touches[0] : event;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  };
+
+  const start = (event) => {
+    drawing.current = true;
+    moved.current = false;
+    canvasRef.current.setPointerCapture?.(event.pointerId);
+    const ctx = canvasRef.current.getContext("2d");
+    const next = point(event);
+    ctx.beginPath();
+    ctx.moveTo(next.x, next.y);
+  };
+
+  const move = (event) => {
+    if (!drawing.current) return;
+    if (event.cancelable) event.preventDefault();
+    moved.current = true;
+    const ctx = canvasRef.current.getContext("2d");
+    const next = point(event);
+    ctx.lineTo(next.x, next.y);
+    ctx.stroke();
+  };
+
+  const end = () => {
+    if (!drawing.current) return;
+    drawing.current = false;
+    if (moved.current) onDraw(canvasRef.current.toDataURL("image/png"));
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    onDraw("");
+  };
+
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        className="h-36 w-full max-w-xl cursor-crosshair touch-none rounded-2xl bg-white"
+        onPointerDown={start}
+        onPointerMove={move}
+        onPointerUp={end}
+        onPointerLeave={end}
+      />
+      <button type="button" className={`${ghostBtn} mt-2`} onClick={clear}>
+        Clear
+      </button>
+    </div>
+  );
+}
 
 export default function Settings() {
   const dispatch = useDispatch();
@@ -36,14 +113,68 @@ export default function Settings() {
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [signature, setSignature] = useState("");
+  const [savingSignature, setSavingSignature] = useState(false);
+  const isPlatformAdmin = roleKey === "platform_admin";
 
   useEffect(() => {
     setTheme(settings.theme || "day");
   }, [settings.theme]);
 
+  useEffect(() => {
+    if (isPlatformAdmin) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.get("/users/me");
+        if (!cancelled) setSignature(data.user?.signatureData || "");
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Failed to load signature");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPlatformAdmin]);
+
   if (roleKey !== "platform_admin" && roleKey !== "super_admin" && !hasPrivilege(privileges, "settings", "view") && roleKey !== "user") {
     return <Navigate to="/" replace />;
   }
+
+  const onUpload = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setError("Signature must be a PNG or JPEG image");
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      setError("Signature must be smaller than 500 KB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setError("");
+      setSignature(String(reader.result || ""));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveSignature = async () => {
+    setSavingSignature(true);
+    setError("");
+    setMessage("");
+    try {
+      const data = await api.put("/users/me", { signatureData: signature || "" });
+      setSignature(data.user?.signatureData || "");
+      setMessage(signature ? "Signature saved. It prints on your line in the material request PDF." : "Signature removed.");
+    } catch (err) {
+      setError(err.message || "Failed to save signature");
+    } finally {
+      setSavingSignature(false);
+    }
+  };
 
   const savePassword = async (event) => {
     event.preventDefault();
@@ -72,7 +203,7 @@ export default function Settings() {
       {error ? <p className="text-sm text-red-200">{error}</p> : null}
 
       <GlassPanel as="article" className="p-6">
-        <h2 className="text-lg font-semibold">Profile</h2>
+        <h2 className="text-lg font-semibold">Account</h2>
         <p className="mt-1 text-sm text-white/50">Name and email are managed by your admin.</p>
         <div className="mt-4 grid max-w-xl gap-3">
           <div>
@@ -89,6 +220,39 @@ export default function Settings() {
           </div>
         </div>
       </GlassPanel>
+
+      {isPlatformAdmin ? null : (
+        <GlassPanel as="article" className="p-6">
+          <h2 className="text-lg font-semibold">Signature</h2>
+          <p className="mt-1 text-sm text-white/50">Sign in the box, or upload a PNG or JPEG. Saved on your account and printed on your PDF line.</p>
+          <div className="mt-4 grid max-w-xl gap-4">
+            <SignaturePad onDraw={setSignature} />
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex h-16 w-40 items-center justify-center overflow-hidden rounded-2xl bg-white">
+                {signature ? (
+                  <img src={signature} alt="Your signature" className="max-h-14 max-w-[9rem] object-contain" />
+                ) : (
+                  <span className="text-xs text-brand-navy/45">No signature yet</span>
+                )}
+              </div>
+              <label className={`${ghostBtn} cursor-pointer`}>
+                Upload signature
+                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={onUpload} />
+              </label>
+              {signature ? (
+                <button type="button" className={ghostBtn} onClick={() => setSignature("")}>
+                  Remove
+                </button>
+              ) : null}
+            </div>
+            <div>
+              <button type="button" className={primaryBtn} disabled={savingSignature} onClick={saveSignature}>
+                {savingSignature ? "Saving..." : "Save signature"}
+              </button>
+            </div>
+          </div>
+        </GlassPanel>
+      )}
 
       <GlassPanel as="article" className="p-6">
         <h2 className="text-lg font-semibold">Change password</h2>

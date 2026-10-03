@@ -38,6 +38,8 @@ const userSchema = new mongoose.Schema(
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     active: { type: Boolean, default: true },
     lastSeenAt: { type: Date, default: null },
+    /** data:image/png or data:image/jpeg. Printed on that user's PDF signature line only. */
+    signatureData: { type: String, default: "" },
   },
   { timestamps: true }
 );

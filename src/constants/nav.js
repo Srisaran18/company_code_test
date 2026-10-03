@@ -1,6 +1,6 @@
 export const modules = {
   dashboard: { to: "/", label: "Dashboard", icon: "home" },
-  material_requests: { to: "/material-requests", label: "Material Requests", icon: "clipboard" },
+  material_requests: { to: "/material-requests", label: "Material Requests", icon: "request" },
   attendance: { to: "/attendance", label: "Attendance", icon: "calendar" },
   approvals: { to: "/approvals", label: "Approvals", icon: "check" },
   procurement: { to: "/procurement", label: "Procurement", icon: "layers" },
@@ -18,6 +18,7 @@ export const modules = {
   reports: { to: "/reports", label: "Reports", icon: "chart" },
   settings: { to: "/settings", label: "Settings", icon: "cog" },
   company_settings: { to: "/company", label: "Company Settings", icon: "building" },
+  pdf_form: { to: "/company/pdf", label: "PDF letterhead", icon: "request" },
   audits: { to: "/audits", label: "Audit report", icon: "list" },
 };
 
@@ -66,6 +67,7 @@ const SUPER_ADMIN_ORDER = [
   "delete_requests",
   "audits",
   "company_settings",
+  "pdf_form",
   "settings",
 ];
 
@@ -73,6 +75,7 @@ const REQUESTOR_MENU_KEYS = ["material_requests", "attendance", "settings"];
 
 const FEATURE_FALLBACK = {
   company_settings: "company_settings",
+  pdf_form: "company_settings",
   dashboard: "core",
   settings: "core",
 };
@@ -89,6 +92,7 @@ export function isModuleEnabled(key, features, catalog) {
 }
 
 function canViewModule(key, privileges, roleKey, features, catalog) {
+  if (key === "pdf_form") return canViewModule("company_settings", privileges, roleKey, features, catalog);
   if (roleKey === "super_admin" && (key === "settings" || key === "audits")) return true;
   if (!isModuleEnabled(key, features, catalog)) return false;
   if (key === "attendance") return true;
@@ -176,6 +180,7 @@ export function homePathForRole(roleKey) {
   }
   if (roleKey === "supplier") return "/purchase-orders";
   if (roleKey === "manager" || roleKey === "department_head") return "/approvals";
+  if (roleKey === "store") return "/material-requests";
   if (roleKey === "procurement") return "/procurement";
   if (roleKey === "finance") return "/payments";
   if (roleKey === "in_charge") return "/deliveries";

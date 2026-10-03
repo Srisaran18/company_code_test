@@ -38,7 +38,7 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => bindAuditRequest(req, next));
 

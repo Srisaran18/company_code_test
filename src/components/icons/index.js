@@ -14,6 +14,12 @@ export const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 8 12 4l8.5 4M3.5 8 12 12m-8.5-4v8L12 20m0-8 8.5-4M12 12v8m8.5-12v8L12 20" />
     </svg>
   ),
+  request: (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 3.5h6.5L19 8v12.5a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 3.5V8h5M10 12h6M10 16h4" />
+    </svg>
+  ),
   clipboard: (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5h6M8 4h8v3H8V4Zm-1 3h10v14H7V7Z" />

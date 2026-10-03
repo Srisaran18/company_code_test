@@ -5,6 +5,8 @@ const headlines = {
   Requested: "Waiting for department manager",
   Returned: "Returned for revision",
   Approved: "Manager approved · procurement queue",
+  "With Store": "With the Store · check stock and issue",
+  "Partially Issued": "Part issued · request stays open",
   Rejected: "Request was rejected",
   Sourcing: "Procurement sourcing",
   "RFQ Issued": "Quotes requested from suppliers",
@@ -32,6 +34,12 @@ const steps = [
     hint: "Dept manager",
     match: ["Approved", "Rejected"],
     colorKey: "Approved",
+  },
+  {
+    label: "Store",
+    hint: "Issue stock",
+    match: ["With Store", "Partially Issued"],
+    colorKey: "With Store",
   },
   {
     label: "Sourcing",

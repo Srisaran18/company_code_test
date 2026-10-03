@@ -11,6 +11,8 @@ export const STATUSES = {
   RETURNED: "Returned",
   REJECTED: "Rejected",
   APPROVED: "Approved",
+  WITH_STORE: "With Store",
+  PARTIALLY_ISSUED: "Partially Issued",
   SOURCING: "Sourcing",
   RFQ_ISSUED: "RFQ Issued",
   PENDING_COMMERCIAL: "Pending Commercial",
@@ -40,7 +42,7 @@ export const roleActions = {
   },
   manager: {
     Requested: [
-      { label: "Approve", status: "Approved", tone: "approve" },
+      { label: "Approve", status: "With Store", tone: "approve" },
       { label: "Return", status: "Returned", tone: "reject" },
       { label: "Reject", status: "Rejected", tone: "reject" },
     ],
@@ -172,6 +174,7 @@ export const WORKFLOW_ROLE_OPTIONS = [
   { key: "admin", name: "Admin" },
   { key: "requestor", name: "Requestor" },
   { key: "manager", name: "Department Manager" },
+  { key: "store", name: "Store" },
   { key: "procurement", name: "Procurement" },
   { key: "department_head", name: "Department Head" },
   { key: "finance", name: "Finance" },

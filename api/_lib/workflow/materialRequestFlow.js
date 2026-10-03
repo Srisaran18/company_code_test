@@ -5,6 +5,7 @@
  * Roles:
  *  - requestor                → create / submit MR
  *  - manager                  → Project / Department Manager
+ *  - store                    → stock, issue, manual handoff of shortages to purchase
  *  - procurement              → sourcing, RFQ, PO
  *  - department_head          → commercial approval
  *  - finance                  → budget approval
@@ -19,6 +20,8 @@ const STATUSES = Object.freeze({
   RETURNED: "Returned",
   REJECTED: "Rejected",
   APPROVED: "Approved",
+  WITH_STORE: "With Store",
+  PARTIALLY_ISSUED: "Partially Issued",
   SOURCING: "Sourcing",
   RFQ_ISSUED: "RFQ Issued",
   PENDING_COMMERCIAL: "Pending Commercial",
@@ -38,6 +41,7 @@ const EDITABLE_STATUSES = [STATUSES.DRAFT, STATUSES.RETURNED];
 const WORKFLOW_ROLES = Object.freeze([
   "requestor",
   "manager",
+  "store",
   "procurement",
   "department_head",
   "finance",
@@ -60,7 +64,7 @@ const roleActions = {
   },
   manager: {
     [STATUSES.REQUESTED]: [
-      { label: "Approve", status: STATUSES.APPROVED, tone: "approve", privilege: "approvals.approve" },
+      { label: "Approve", status: STATUSES.WITH_STORE, tone: "approve", privilege: "approvals.approve" },
       { label: "Return", status: STATUSES.RETURNED, tone: "reject", privilege: "approvals.reject" },
       { label: "Reject", status: STATUSES.REJECTED, tone: "reject", privilege: "approvals.reject" },
     ],
@@ -276,6 +280,12 @@ function listFilterForRole(actor, scope) {
   }
 
   // Cross-department functions
+  if (role === "store") {
+    return {
+      $or: [{ storeOpen: true }, { status: { $in: [STATUSES.WITH_STORE, STATUSES.PARTIALLY_ISSUED] } }],
+    };
+  }
+
   if (role === "procurement" || role === "finance") {
     return {};
   }
@@ -327,6 +337,11 @@ function scopedListFilter(actor, scope) {
       ],
     };
   }
+  if (role === "store") {
+    return {
+      $or: [{ storeOpen: true }, { status: { $in: [STATUSES.WITH_STORE, STATUSES.PARTIALLY_ISSUED] } }],
+    };
+  }
   if (role === "procurement" || role === "finance") return {};
   if (role === "supplier") return { status: { $in: roleInboxStatuses.supplier } };
   if (["department_head", "in_charge", "admin"].includes(role)) {
@@ -363,6 +378,7 @@ const roleCatalog = [
   { name: "Admin", key: "admin" },
   { name: "Requestor", key: "requestor" },
   { name: "Department Manager", key: "manager" },
+  { name: "Store", key: "store" },
   { name: "Procurement", key: "procurement" },
   { name: "Department Head", key: "department_head" },
   { name: "Finance", key: "finance" },
@@ -425,6 +441,12 @@ const rolePrivileges = {
     dashboard: ["view"],
     material_requests: ["view", "edit"],
     approvals: ["view", "approve", "reject"],
+    settings: ["view", "edit"],
+  },
+  store: {
+    dashboard: ["view"],
+    material_requests: ["view", "edit"],
+    materials: ["view", "create", "edit"],
     settings: ["view", "edit"],
   },
   procurement: {

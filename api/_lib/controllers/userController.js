@@ -349,6 +349,32 @@ const requestDelete = async (req, res) => {
   }
 };
 
+function publicProfile(user) {
+  return { ...toPublicUser(user), signatureData: user.signatureData || "" };
+}
+
+function readSignature(value) {
+  if (value === undefined) return undefined;
+  const logo = String(value || "");
+  if (logo && !/^data:image\/(png|jpeg);base64,/.test(logo)) {
+    throw httpError(400, "Signature must be a PNG or JPEG image");
+  }
+  if (logo.length > 700000) {
+    throw httpError(400, "Signature must be smaller than 500 KB");
+  }
+  return logo;
+}
+
+const getProfile = async (req, res) => {
+  try {
+    const user = await findCompanyUser(req, req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ user: publicProfile(user) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
 const updateProfile = async (req, res) => {
   try {
     const user = await findCompanyUser(req, req.user.id);
@@ -361,8 +387,33 @@ const updateProfile = async (req, res) => {
       if (exists) return res.status(409).json({ message: "Email already in use" });
       user.email = nextEmail;
     }
+    if (req.body.signatureData !== undefined) {
+      user.signatureData = readSignature(req.body.signatureData);
+    }
     await user.save();
-    res.status(200).json({ message: "Profile updated", user: toPublicUser(user) });
+    res.status(200).json({ message: "Profile updated", user: publicProfile(user) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+/** Signatures for the PDF only. Same company, and never included on user lists. */
+const listSignatures = async (req, res) => {
+  try {
+    const ids = String(req.query.ids || "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => isValidId(id))
+      .slice(0, 20);
+    if (!ids.length || !req.tenant?.companyId) {
+      return res.status(200).json({ signatures: {} });
+    }
+    const users = await User.find(tenantFilter(req, { _id: { $in: ids.map((id) => toId(id)) } })).select("signatureData");
+    const signatures = {};
+    users.forEach((user) => {
+      signatures[user._id.toString()] = user.signatureData || "";
+    });
+    res.status(200).json({ signatures });
   } catch (error) {
     sendError(res, error);
   }
@@ -424,7 +475,9 @@ module.exports = {
   updateUser,
   deleteUser,
   requestDelete,
+  getProfile,
   updateProfile,
+  listSignatures,
   changePassword,
   createQuota,
 };

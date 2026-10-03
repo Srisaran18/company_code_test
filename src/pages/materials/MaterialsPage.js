@@ -6,7 +6,7 @@ import { approveBtn, fieldClass, ghostBtn } from "../../components/ui/formStyles
 import { hasPrivilege } from "../../constants/privileges";
 import { api } from "../../services/api";
 
-const emptyRow = () => ({ productId: "", name: "", unit: "", shared: false });
+const emptyRow = () => ({ productId: "", name: "", unit: "", stock: "0", shared: false });
 
 export default function MaterialsPage() {
   const { id } = useParams();
@@ -54,6 +54,7 @@ export default function MaterialsPage() {
                 productId: match.productId || "",
                 name: match.name || "",
                 unit: match.unit || "",
+                stock: String(match.stock ?? 0),
                 shared: match.shared === true,
               },
             ],
@@ -135,6 +136,7 @@ export default function MaterialsPage() {
           projectId: form.projectId,
           departmentId: form.departmentId,
           unit: row.unit.trim(),
+          stock: row.stock,
           shared: row.shared === true,
         });
       } else {
@@ -145,6 +147,7 @@ export default function MaterialsPage() {
             projectId: form.projectId,
             departmentId: form.departmentId,
             unit: row.unit.trim(),
+            stock: row.stock,
             shared: row.shared === true,
           });
         }
@@ -232,7 +235,8 @@ export default function MaterialsPage() {
               <span className="sm:col-span-2">P. id</span>
               <span className="sm:col-span-3">Name</span>
               <span className="sm:col-span-2">Unit</span>
-              <span className="sm:col-span-3">Stationery</span>
+              <span className="sm:col-span-1">Stock</span>
+              <span className="sm:col-span-2">Stationery</span>
               <span className="sm:col-span-2 text-center">Actions</span>
             </div>
 
@@ -258,13 +262,20 @@ export default function MaterialsPage() {
                   value={row.unit}
                   onChange={(e) => updateRow(index, { unit: e.target.value })}
                 />
-                <label className="flex items-center gap-2 text-sm text-white/75 sm:col-span-3">
+                <input
+                  className={`${fieldClass} sm:col-span-1`}
+                  placeholder="Stock"
+                  inputMode="decimal"
+                  value={row.stock}
+                  onChange={(e) => updateRow(index, { stock: e.target.value.replace(/[^\d.]/g, "") })}
+                />
+                <label className="flex items-center gap-2 text-sm text-white/75 sm:col-span-2">
                   <input
                     type="checkbox"
                     checked={row.shared === true}
                     onChange={(e) => updateRow(index, { shared: e.target.checked })}
                   />
-                  Show to all users
+                  Stationery — any department can request this
                 </label>
                 <div className="flex items-center justify-center gap-2 sm:col-span-2">
                   <button

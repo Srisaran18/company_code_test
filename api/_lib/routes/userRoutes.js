@@ -6,7 +6,9 @@ const {
   updateUser,
   deleteUser,
   requestDelete,
+  getProfile,
   updateProfile,
+  listSignatures,
   changePassword,
   createQuota,
 } = require("../controllers/userController");
@@ -14,7 +16,9 @@ const {
 const router = express.Router();
 
 router.use(verifyToken);
+router.get("/me", getProfile);
 router.put("/me", updateProfile);
+router.get("/signatures", listSignatures);
 router.put("/me/password", changePassword);
 router.use(requireFeature("users"));
 router.get("/create-quota", createQuota);

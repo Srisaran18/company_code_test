@@ -6,6 +6,7 @@ import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import DataTable from "../../components/ui/DataTable";
 import GlassPanel, { PageIntro } from "../../components/ui/GlassPanel";
 import StatusBadge from "../../components/ui/StatusBadge";
+import { priorityLabel } from "../../constants/priority";
 import { fieldClass, ghostBtn, primaryBtn } from "../../components/ui/formStyles";
 import {
   deleteMaterialRequest,
@@ -105,13 +106,39 @@ export default function MaterialFlow({
             { accessorKey: "createdBy", header: "Created by" },
             { accessorKey: "quantity", header: "Products" },
           ]),
-      { accessorKey: "requestedBy", header: "Created for" },
+      ...(moduleKey === "material_requests"
+        ? [
+            {
+              accessorKey: "priority",
+              header: "Priority",
+              cell: (info) => <StatusBadge value={priorityLabel(info.getValue() || "P3")} />,
+            },
+          ]
+        : []),
       { accessorKey: "assignedTo", header: "Assigned manager" },
       {
         accessorKey: "status",
         header: "Status",
         cell: (info) => <StatusBadge value={info.getValue()} />,
       },
+      ...(moduleKey === "material_requests"
+        ? [
+            {
+              id: "fulfillment",
+              header: "Issued / pending",
+              cell: ({ row }) => {
+                const products = row.original.products || [];
+                if (!products.length || !row.original.storeOpen) return "—";
+                const issued = products.reduce((sum, item) => sum + (Number(item.issuedQty) || 0), 0);
+                const pending = products.reduce(
+                  (sum, item) => sum + (Number(item.pendingQty) || 0),
+                  0
+                );
+                return `${issued} issued · ${pending} pending`;
+              },
+            },
+          ]
+        : []),
       ...(showPayment
         ? [
             {

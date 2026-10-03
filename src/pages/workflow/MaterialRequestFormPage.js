@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import GlassPanel, { PageIntro } from "../../components/ui/GlassPanel";
 import { approveBtn, fieldClass, ghostBtn } from "../../components/ui/formStyles";
 import SearchSelect from "../../components/ui/SearchSelect";
+import { PRIORITIES } from "../../constants/priority";
 import { hasPrivilege } from "../../constants/privileges";
 import { api } from "../../services/api";
 import { saveMaterialRequest } from "../../store/workflowSlice";
@@ -15,7 +16,6 @@ const emptyProduct = () => ({
   description: "",
   quantity: "",
   unit: "",
-  amount: "",
 });
 
 function ShakeBox({ active, shakeKey, className = "", children }) {
@@ -43,7 +43,6 @@ function toFormProducts(products) {
     description: item.description || (!item.productId ? item.name : "") || "",
     quantity: item.quantity || "",
     unit: item.unit || "",
-    amount: item.amount ?? "",
   }));
 }
 
@@ -55,8 +54,6 @@ export default function MaterialRequestFormPage() {
   const privileges = useSelector((state) => state.auth.privileges);
   const currentUser = useSelector((state) => state.auth.user);
   const userDepartment = currentUser?.department || "";
-  const currentUserId = currentUser?.id || "";
-  const currentUserName = currentUser?.name || "";
   const existing = useSelector((state) =>
     state.workflow.materialRequests.find((item) => item.id === id)
   );
@@ -69,13 +66,15 @@ export default function MaterialRequestFormPage() {
   const [projects, setProjects] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [materials, setMaterials] = useState([]);
-  const [requesters, setRequesters] = useState([]);
   const [manager, setManager] = useState(null);
   const [form, setForm] = useState({
     projectId: "",
     departmentId: "",
-    createdForId: currentUserId,
+    location: "",
+    region: "",
+    city: "",
     justification: "",
+    priority: "P3",
     products: [emptyProduct()],
     status: "Draft",
   });
@@ -99,7 +98,6 @@ export default function MaterialRequestFormPage() {
 
   useEffect(() => {
     if (!form.departmentId || !form.projectId) {
-      setRequesters([]);
       setManager(null);
       return;
     }
@@ -109,22 +107,15 @@ export default function MaterialRequestFormPage() {
         const params = new URLSearchParams({ projectId: form.projectId, departmentId: form.departmentId });
         const response = await api.get(`/material-requests/assignees?${params.toString()}`);
         if (cancelled) return;
-        const people = response.requesters || [];
-        setRequesters(people);
         setManager(response.manager || null);
-        setForm((prev) => {
-          if (prev.createdForId && people.some((item) => item.id === prev.createdForId)) return prev;
-          const self = people.find((item) => item.id === currentUserId);
-          return { ...prev, createdForId: self?.id || "" };
-        });
       } catch (err) {
-        if (!cancelled) setError(err.message || "Failed to load requesters");
+        if (!cancelled) setError(err.message || "Failed to load the department manager");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [currentUserId, form.departmentId, form.projectId]);
+  }, [form.departmentId, form.projectId]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -132,8 +123,11 @@ export default function MaterialRequestFormPage() {
       setForm({
         projectId: existing.projectId || "",
         departmentId: existing.departmentId || "",
-        createdForId: existing.requestedById || "",
+        location: existing.location || "",
+        region: existing.region || "",
+        city: existing.city || "",
         justification: existing.justification || "",
+        priority: existing.priority || "P3",
         status: existing.status || "Draft",
         products: toFormProducts(existing.products),
       });
@@ -148,8 +142,11 @@ export default function MaterialRequestFormPage() {
         setForm({
           projectId: match.projectId || "",
           departmentId: match.departmentId || "",
-          createdForId: match.requestedById || "",
+          location: match.location || "",
+          region: match.region || "",
+          city: match.city || "",
           justification: match.justification || "",
+          priority: match.priority || "P3",
           status: match.status || "Draft",
           products: toFormProducts(match.products),
         });
@@ -223,7 +220,6 @@ export default function MaterialRequestFormPage() {
       ...emptyProduct(),
       description: item.description,
       quantity: item.quantity,
-      amount: item.amount,
     }));
 
   const onProjectChange = (projectId) => {
@@ -232,7 +228,6 @@ export default function MaterialRequestFormPage() {
       ...prev,
       projectId,
       departmentId: defaultDepartmentFor(projectId),
-      createdForId: currentUserId,
       products: clearProductChoices(prev.products),
     }));
   };
@@ -242,7 +237,6 @@ export default function MaterialRequestFormPage() {
     setForm((prev) => ({
       ...prev,
       departmentId,
-      createdForId: currentUserId,
       products: clearProductChoices(prev.products),
     }));
   };
@@ -257,12 +251,11 @@ export default function MaterialRequestFormPage() {
         description: item.description || "",
         quantity: String(item.quantity),
         unit: item.unit || "",
-        amount: Number(item.amount) || 0,
       }));
     const nextInvalid = {};
     if (!form.projectId) nextInvalid.project = true;
     if (!form.departmentId) nextInvalid.department = true;
-    if (!form.createdForId) nextInvalid.createdFor = true;
+    if (!form.priority) nextInvalid.priority = true;
     if (!String(form.justification || "").trim()) nextInvalid.justification = true;
     if (status === "Requested" && form.projectId && form.departmentId && !manager) nextInvalid.manager = true;
     if (!products.length) {
@@ -292,8 +285,11 @@ export default function MaterialRequestFormPage() {
       const payload = {
         projectId: form.projectId,
         departmentId: form.departmentId,
-        createdForId: form.createdForId,
+        location: form.location,
+        region: form.region,
+        city: form.city,
         justification: form.justification,
+        priority: form.priority,
         products,
         status,
       };
@@ -355,33 +351,30 @@ export default function MaterialRequestFormPage() {
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm text-white/70">Created for</span>
-              <SearchSelect
-                value={form.createdForId}
-                onChange={(createdForId) => {
-                  clearInvalid("createdFor");
-                  setForm({ ...form, createdForId });
-                }}
-                invalid={Boolean(invalid.createdFor)}
-                shakeKey={shakeKey}
-                placeholder={
-                  !form.departmentId
-                    ? "Select department first"
-                    : !form.projectId
-                      ? "Select a project first"
-                      : "Select a person"
-                }
-                required
-                disabled={!form.departmentId}
-                options={[
-                  ...(form.createdForId && !requesters.some((item) => item.id === form.createdForId)
-                    ? [{
-                        value: form.createdForId,
-                        label: form.createdForId === currentUserId ? currentUserName : "Saved requester",
-                      }]
-                    : []),
-                  ...requesters.map((item) => ({ value: item.id, label: item.name })),
-                ]}
+              <span className="mb-1.5 block text-sm text-white/70">Location</span>
+              <input
+                className={fieldClass}
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                placeholder="Site or location"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm text-white/70">Region</span>
+              <input
+                className={fieldClass}
+                value={form.region}
+                onChange={(e) => setForm({ ...form, region: e.target.value })}
+                placeholder="Region"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm text-white/70">City</span>
+              <input
+                className={fieldClass}
+                value={form.city}
+                onChange={(e) => setForm({ ...form, city: e.target.value })}
+                placeholder="City"
               />
             </label>
             <label className="block">
@@ -398,6 +391,21 @@ export default function MaterialRequestFormPage() {
                 disabled
               />
               </ShakeBox>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm text-white/70">Priority</span>
+              <SearchSelect
+                value={form.priority}
+                onChange={(priority) => {
+                  clearInvalid("priority");
+                  setForm({ ...form, priority });
+                }}
+                placeholder="Select priority"
+                required
+                invalid={Boolean(invalid.priority)}
+                shakeKey={shakeKey}
+                options={PRIORITIES}
+              />
             </label>
             <label className="block sm:col-span-2">
               <span className="mb-1.5 block text-sm text-white/70">Description</span>
@@ -425,10 +433,9 @@ export default function MaterialRequestFormPage() {
             </div>
 
             <div className="hidden gap-2 text-[11px] uppercase tracking-[0.14em] text-white/45 sm:grid sm:grid-cols-12">
-              <span className="sm:col-span-3">P. id</span>
-              <span className="sm:col-span-3">Material name</span>
+              <span className="sm:col-span-4">P. id</span>
+              <span className="sm:col-span-4">Material name</span>
               <span className="sm:col-span-2">Qty</span>
-              <span className="sm:col-span-2">Amount</span>
               <span className="sm:col-span-2 text-center">Actions</span>
             </div>
 
@@ -452,35 +459,32 @@ export default function MaterialRequestFormPage() {
                 (item, itemIndex) => itemIndex !== index && item.productId
               );
               const productRequired = Boolean(product.productId) || !anotherRowChosen;
+              const ready = Boolean(form.projectId && form.departmentId);
               return (
                 <div key={`product-${index}`} className="grid gap-2 sm:grid-cols-12 sm:items-center">
                   <SearchSelect
-                    className="sm:col-span-3"
+                    className="sm:col-span-4"
                     value={product.productId}
                     onChange={(productId) => chooseMaterial(index, productId)}
-                    placeholder={
-                      form.projectId && form.departmentId
-                        ? "Select product"
-                        : "Select project and department first"
-                    }
+                    placeholder={ready ? "Select product" : "Select project and department first"}
                     required={productRequired}
                     invalid={Boolean(invalid[`product-${index}`])}
                     shakeKey={shakeKey}
-                    disabled={!form.projectId || !form.departmentId}
+                    disabled={!ready}
                     options={productOptions.map((item) => ({
                       value: item.productId,
                       label: item.name ? `${item.productId} — ${item.name}` : item.productId,
                     }))}
                   />
                   <SearchSelect
-                    className="sm:col-span-3"
+                    className="sm:col-span-4"
                     value={product.productId}
                     onChange={(productId) => chooseMaterial(index, productId)}
                     placeholder="Material name"
                     required={productRequired}
                     invalid={Boolean(invalid[`product-${index}`])}
                     shakeKey={shakeKey}
-                    disabled={!form.projectId || !form.departmentId}
+                    disabled={!ready}
                     options={productOptions.map((item) => ({
                       value: item.productId,
                       label: item.name || item.productId,
@@ -503,13 +507,6 @@ export default function MaterialRequestFormPage() {
                     required={Boolean(product.productId)}
                   />
                   </ShakeBox>
-                  <input
-                    type="number"
-                    className={`${fieldClass} sm:col-span-2`}
-                    placeholder="Amount"
-                    value={product.amount}
-                    onChange={(e) => updateProduct(index, { amount: e.target.value })}
-                  />
                   <div className="flex items-center justify-center gap-2 sm:col-span-2">
                     <button
                       type="button"

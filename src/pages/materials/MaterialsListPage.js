@@ -54,6 +54,11 @@ export default function MaterialsListPage() {
       },
       { accessorKey: "unit", header: "Unit" },
       {
+        accessorKey: "stock",
+        header: "Stock",
+        cell: (info) => Number(info.getValue() || 0).toLocaleString(),
+      },
+      {
         accessorKey: "shared",
         header: "Stationery",
         cell: (info) => (info.getValue() ? "All users" : "Department"),

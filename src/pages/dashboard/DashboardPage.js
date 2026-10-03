@@ -58,7 +58,7 @@ export default function Dashboard() {
       key: "material_requests",
       label: "Material Requests",
       to: "/material-requests",
-      icon: "clipboard",
+      icon: "request",
       value: mrs.length,
     },
     {
@@ -138,7 +138,6 @@ export default function Dashboard() {
           departments.find((item) => item.key === info.getValue())?.name || info.getValue() || "—",
       },
       { accessorKey: "createdBy", header: "Created by" },
-      { accessorKey: "requestedBy", header: "Created for" },
       { accessorKey: "status", header: "Status", cell: (info) => <StatusBadge value={info.getValue()} /> },
       { accessorKey: "date", header: "Date" },
     ],

@@ -2,6 +2,23 @@ const mongoose = require("mongoose");
 
 const COMPANY_STATUSES = ["active", "suspended", "inactive"];
 
+const letterheadSchema = new mongoose.Schema(
+  {
+    address: { type: String, trim: true, default: "" },
+    email: { type: String, trim: true, default: "" },
+    phone: { type: String, trim: true, default: "" },
+    mobile: { type: String, trim: true, default: "" },
+    website: { type: String, trim: true, default: "" },
+    fax: { type: String, trim: true, default: "" },
+    poBox: { type: String, trim: true, default: "" },
+    crNumber: { type: String, trim: true, default: "" },
+    vatNumber: { type: String, trim: true, default: "" },
+    /** data:image/png or data:image/jpeg, used on the material request PDF. */
+    logoData: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const companySettingsSchema = new mongoose.Schema(
   {
     dateFormat: { type: String, trim: true, default: "DD-MM-YYYY" },
@@ -42,6 +59,7 @@ const companySchema = new mongoose.Schema(
     timezone: { type: String, trim: true, default: "UTC" },
     currency: { type: String, trim: true, uppercase: true, default: "USD" },
     logoUrl: { type: String, trim: true, default: "" },
+    letterhead: { type: letterheadSchema, default: () => ({}) },
     status: { type: String, enum: COMPANY_STATUSES, default: "active" },
     settings: { type: companySettingsSchema, default: () => ({}) },
     /** Access window. Companies without a plan (created before plans existed) have no expiry. */

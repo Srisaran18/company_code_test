@@ -4,7 +4,14 @@ const Department = require("../models/departmentModel");
 const { httpError } = require("./httpError");
 
 /** Roles that work across every department of the projects they can access. */
-const COMPANY_WIDE_ROLES = Object.freeze(["super_admin", "procurement", "finance", "supplier", "back_office"]);
+const COMPANY_WIDE_ROLES = Object.freeze([
+  "super_admin",
+  "store",
+  "procurement",
+  "finance",
+  "supplier",
+  "back_office",
+]);
 
 function isValidId(value) {
   return Boolean(value) && mongoose.Types.ObjectId.isValid(String(value)) && /^[a-f0-9]{24}$/i.test(String(value));

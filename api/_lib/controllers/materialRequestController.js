@@ -21,8 +21,42 @@ const {
   isEditableStatus,
 } = require("../workflow/materialRequestFlow");
 
+const PRIORITIES = new Set(["P1", "P2", "P3"]);
+
+function readPriority(value, { fallback = "P3" } = {}) {
+  if (value === undefined || value === null || String(value).trim() === "") return fallback;
+  const key = String(value).trim().toUpperCase();
+  if (!PRIORITIES.has(key)) throw httpError(400, "Priority must be P1, P2, or P3");
+  return key;
+}
+
 function formatDate(value = new Date()) {
   return value.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function qtyNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.round(number * 1000) / 1000;
+}
+
+function requestedQty(line) {
+  const match = String(line?.quantity ?? "").match(/\d+(?:\.\d+)?/);
+  return match ? qtyNumber(match[0]) : 0;
+}
+
+function pendingQty(line) {
+  return Math.max(0, qtyNumber(requestedQty(line) - (Number(line?.issuedQty) || 0)));
+}
+
+function isFullyIssued(record) {
+  const products = record?.products || [];
+  return products.length > 0 && products.every((line) => pendingQty(line) <= 0);
+}
+
+function assertStoreActor(req) {
+  if (req.user.role === "super_admin" || normalizeRole(req.user.role) === "store") return;
+  throw httpError(403, "Only the Store department can issue stock or send quantities to purchase");
 }
 
 function summarizeProducts(products = []) {
@@ -36,6 +70,8 @@ function summarizeProducts(products = []) {
           quantity: String(item.quantity || "").trim(),
           unit: String(item.unit || "").trim(),
           amount: Number(item.amount) || 0,
+          issuedQty: Number(item.issuedQty) || 0,
+          poQty: Number(item.poQty) || 0,
         }))
     : [];
   const quantity = list
@@ -109,6 +145,8 @@ async function resolveCatalogLines(req, products, project, department) {
       quantity: item.quantity,
       unit: material.unit || "",
       amount: item.amount,
+      issuedQty: 0,
+      poQty: 0,
     };
   });
   const quantity = lines
@@ -116,6 +154,24 @@ async function resolveCatalogLines(req, products, project, department) {
     .join(", ");
   const amount = lines.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   return { products: lines, quantity, amount };
+}
+
+function publicProducts(products = []) {
+  return products.map((item) => {
+    const line = typeof item.toObject === "function" ? item.toObject() : item;
+    const issuedQty = Number(line.issuedQty) || 0;
+    return {
+      productId: line.productId || "",
+      name: line.name || "",
+      description: line.description || "",
+      quantity: line.quantity || "",
+      unit: line.unit || "",
+      amount: Number(line.amount) || 0,
+      issuedQty,
+      poQty: Number(line.poQty) || 0,
+      pendingQty: pendingQty({ ...line, issuedQty }),
+    };
+  });
 }
 
 function toPublic(record) {
@@ -132,10 +188,16 @@ function toPublic(record) {
     assignedToId: record.assignedToId ? String(record.assignedToId) : "",
     department: record.department || "",
     departmentId: record.departmentId ? String(record.departmentId) : "",
+    location: record.location || "",
+    region: record.region || "",
+    city: record.city || "",
     justification: record.justification || "",
-    products: record.products || [],
+    priority: record.priority || "P3",
+    products: publicProducts(record.products || []),
     quantity: record.quantity || "",
     amount: record.amount || 0,
+    storeOpen: record.storeOpen === true,
+    purchaseSent: record.purchaseSent === true,
     supplier: record.supplier || "",
     quotation: record.quotation || "",
     status: record.status,
@@ -151,6 +213,12 @@ function canAccessRecord(req, record) {
   const scope = req.scope;
   const role = normalizeRole(actor.role);
   if (actor.role === "super_admin") return true;
+  if (role === "store") {
+    return (
+      record.storeOpen === true ||
+      ["With Store", "Partially Issued", "Closed"].includes(record.status)
+    );
+  }
   if (["procurement", "finance"].includes(role)) return true;
   if (role === "supplier") {
     return ["RFQ Issued", "Ordered", "In transit", "PO Rejected", "Pending Receipt"].includes(record.status);
@@ -257,7 +325,7 @@ const createRequest = async (req, res) => {
     if (!hasPrivilege(req.user, "material_requests", "create")) {
       return res.status(403).json({ message: "You cannot create material requests" });
     }
-    const { justification, products, status, createdForId } = req.body;
+    const { justification, products, status, createdForId, priority, location, region, city } = req.body;
     if (!req.body.project && !req.body.projectId) return res.status(400).json({ message: "Project is required" });
 
     const nextStatus = status === "Requested" ? "Requested" : "Draft";
@@ -267,7 +335,9 @@ const createRequest = async (req, res) => {
       departmentId: req.body.departmentId,
       department: req.body.department || (req.body.departmentId ? undefined : req.user.department),
     });
-    const requester = await resolveCreatedFor(req, createdForId, project, department);
+    const requester = createdForId
+      ? await resolveCreatedFor(req, createdForId, project, department)
+      : { _id: req.user.id, name: req.user.name };
     const manager =
       nextStatus === "Requested"
         ? await requireProjectManager(req, project, department)
@@ -282,6 +352,7 @@ const createRequest = async (req, res) => {
       mrNo,
       project: project.name,
       justification: justification || "",
+      priority: readPriority(priority),
       products: summary.products,
       quantity: summary.quantity,
       amount: summary.amount,
@@ -292,6 +363,9 @@ const createRequest = async (req, res) => {
       assignedTo: manager?.name || "",
       assignedToId: manager?._id,
       department: department.key,
+      location: String(location || "").trim(),
+      region: String(region || "").trim(),
+      city: String(city || "").trim(),
       status: nextStatus,
       paymentStatus: "Not started",
       date: formatDate(),
@@ -320,14 +394,18 @@ const updateRequest = async (req, res) => {
       return res.status(403).json({ message: "You cannot update this material request" });
     }
 
-    const { project, projectId, justification, products, status, supplier, paymentStatus, quotation, department, departmentId, createdForId } =
+    const { project, projectId, justification, products, status, supplier, paymentStatus, quotation, department, departmentId, createdForId, priority, location, region, city } =
       req.body;
     const previousStatus = record.status;
     const hierarchyChange = Boolean(project || projectId || department || departmentId);
     const contentChange =
       hierarchyChange ||
       justification !== undefined ||
+      location !== undefined ||
+      region !== undefined ||
+      city !== undefined ||
       createdForId !== undefined ||
+      priority !== undefined ||
       Array.isArray(products);
     const statusChange = Boolean(status) && status !== previousStatus;
     const quotationUpdate = quotation !== undefined;
@@ -409,6 +487,10 @@ const updateRequest = async (req, res) => {
       record.department = departmentRecord.key;
     }
     if (justification !== undefined) record.justification = justification;
+    if (location !== undefined) record.location = String(location || "").trim();
+    if (region !== undefined) record.region = String(region || "").trim();
+    if (city !== undefined) record.city = String(city || "").trim();
+    if (priority !== undefined) record.priority = readPriority(priority, { fallback: record.priority || "P3" });
     if (createdForId) {
       await ensureHierarchy();
       const requester = await resolveCreatedFor(req, createdForId, projectRecord, departmentRecord);
@@ -430,12 +512,27 @@ const updateRequest = async (req, res) => {
     if (Array.isArray(products)) {
       await ensureHierarchy();
       const summary = await resolveCatalogLines(req, products, projectRecord, departmentRecord);
-      record.products = summary.products;
+      const previous = new Map((record.products || []).map((item) => [item.productId, item]));
+      record.products = summary.products.map((line) => {
+        const prior = previous.get(line.productId);
+        const issuedQty = Number(prior?.issuedQty) || 0;
+        if (issuedQty > requestedQty(line)) {
+          throw httpError(400, `Issued quantity for ${line.productId} is already ${issuedQty}`);
+        }
+        return { ...line, issuedQty, poQty: Number(prior?.poQty) || 0 };
+      });
       record.quantity = summary.quantity;
       record.amount = summary.amount;
     }
     if (statusChange) {
+      if (status === "Closed" && record.storeOpen && !isFullyIssued(record)) {
+        return res.status(400).json({
+          message: "This request stays open until the full requested quantity has been issued",
+        });
+      }
       record.status = status;
+      if (status === "With Store") record.storeOpen = true;
+      if (status === "Closed" || status === "Rejected") record.storeOpen = false;
       if (["Ordered", "PO Issued"].includes(status) && record.paymentStatus === "Not started") {
         record.paymentStatus = "Open";
       }
@@ -503,4 +600,166 @@ const deleteRequest = async (req, res) => {
   }
 };
 
-module.exports = { listAssignees, listRequests, getRequest, createRequest, updateRequest, deleteRequest };
+function applyIssueStatus(record) {
+  if (isFullyIssued(record)) {
+    record.status = "Closed";
+    record.storeOpen = false;
+    return;
+  }
+  record.storeOpen = true;
+  if (!record.purchaseSent) {
+    const anyIssued = (record.products || []).some((line) => Number(line.issuedQty) > 0);
+    record.status = anyIssued ? "Partially Issued" : "With Store";
+  }
+}
+
+const issueStock = async (req, res) => {
+  try {
+    assertStoreActor(req);
+    const record = await findRecord(req, req.params.id);
+    if (!record) return res.status(404).json({ message: "Material request not found" });
+    if (!canAccessRecord(req, record)) {
+      return res.status(403).json({ message: "You cannot issue stock for this material request" });
+    }
+    if (!record.storeOpen && !["With Store", "Partially Issued"].includes(record.status)) {
+      return res.status(400).json({ message: "This request is not with the Store" });
+    }
+    if (record.status === "Closed" || record.status === "Rejected") {
+      return res.status(400).json({ message: "This request is no longer open for issuing" });
+    }
+
+    const lines = Array.isArray(req.body.lines) ? req.body.lines : [];
+    const requested = new Map();
+    for (const line of lines) {
+      const productId = String(line?.productId || "").trim().toUpperCase();
+      const quantity = qtyNumber(line?.quantity);
+      if (!productId || quantity <= 0) continue;
+      requested.set(productId, qtyNumber((requested.get(productId) || 0) + quantity));
+    }
+    if (!requested.size) return res.status(400).json({ message: "Enter a quantity to issue" });
+
+    const updates = [];
+    for (const [productId, quantity] of requested) {
+      const line = (record.products || []).find((item) => item.productId === productId);
+      if (!line) return res.status(400).json({ message: `Product ${productId} is not on this request` });
+      if (quantity > pendingQty(line)) {
+        return res.status(400).json({
+          message: `Only ${pendingQty(line)} of ${productId} is still pending`,
+        });
+      }
+      const material = await Material.findOne(tenantFilter(req, { productId, active: { $ne: false } }));
+      if (!material) return res.status(400).json({ message: `Product ${productId} is not in the store catalog` });
+      if (qtyNumber(material.stock) < quantity) {
+        return res.status(400).json({
+          message: `Only ${qtyNumber(material.stock)} of ${productId} is in stock. Nothing was sent to purchase.`,
+        });
+      }
+      updates.push({ material, quantity, line });
+    }
+
+    const applied = [];
+    for (const update of updates) {
+      const saved = await Material.findOneAndUpdate(
+        tenantFilter(req, { _id: update.material._id, stock: { $gte: update.quantity } }),
+        { $inc: { stock: -update.quantity } },
+        { returnDocument: "after" }
+      );
+      if (!saved) {
+        for (const done of applied) {
+          await Material.updateOne(tenantFilter(req, { _id: done.material._id }), { $inc: { stock: done.quantity } });
+        }
+        return res.status(400).json({
+          message: `Stock for ${update.line.productId} changed before it could be issued. Nothing was issued.`,
+        });
+      }
+      applied.push(update);
+      update.line.issuedQty = qtyNumber((Number(update.line.issuedQty) || 0) + update.quantity);
+    }
+
+    record.markModified("products");
+    const previousStatus = record.status;
+    applyIssueStatus(record);
+    await record.save();
+
+    await logAudit({
+      action: "issue",
+      module: "material_requests",
+      summary: isFullyIssued(record)
+        ? `Issued the remaining stock and closed ${record.mrNo}`
+        : `Issued stock on ${record.mrNo}. The request stays open`,
+      actor: req.user,
+      targetType: "material_request",
+      targetId: record.mrNo,
+      meta: { status: record.status, previousStatus },
+    });
+
+    res.status(200).json({
+      message: isFullyIssued(record)
+        ? "Full quantity issued. The material request is closed."
+        : "Stock issued. The request stays open until the full quantity is issued.",
+      materialRequest: toPublic(record),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+const sendPendingToPurchase = async (req, res) => {
+  try {
+    assertStoreActor(req);
+    requireProcurementFeature(req);
+    const record = await findRecord(req, req.params.id);
+    if (!record) return res.status(404).json({ message: "Material request not found" });
+    if (!canAccessRecord(req, record)) {
+      return res.status(403).json({ message: "You cannot update this material request" });
+    }
+    if (!record.storeOpen) {
+      return res.status(400).json({ message: "This request is not with the Store" });
+    }
+    if (record.purchaseSent) {
+      return res.status(400).json({ message: "Pending quantities were already sent to the purchase process" });
+    }
+    const pendingLines = (record.products || []).filter((line) => pendingQty(line) > 0);
+    if (!pendingLines.length) {
+      return res.status(400).json({ message: "Nothing is pending. Issue the stock on hand instead." });
+    }
+
+    pendingLines.forEach((line) => {
+      line.poQty = qtyNumber((Number(line.poQty) || 0) + pendingQty(line));
+    });
+    record.markModified("products");
+    record.purchaseSent = true;
+    record.storeOpen = true;
+    const previousStatus = record.status;
+    record.status = "Sourcing";
+    await record.save();
+
+    await logAudit({
+      action: "send_to_purchase",
+      module: "material_requests",
+      summary: `Store sent the pending quantity on ${record.mrNo} to the purchase process. No purchase order was created.`,
+      actor: req.user,
+      targetType: "material_request",
+      targetId: record.mrNo,
+      meta: { status: record.status, previousStatus },
+    });
+
+    res.status(200).json({
+      message: "Pending quantities were sent to the purchase process. No purchase order was created, and this request stays open until the full quantity is issued.",
+      materialRequest: toPublic(record),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+module.exports = {
+  listAssignees,
+  listRequests,
+  getRequest,
+  createRequest,
+  updateRequest,
+  deleteRequest,
+  issueStock,
+  sendPendingToPurchase,
+};

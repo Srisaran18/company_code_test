@@ -12,6 +12,8 @@ const materialSchema = new mongoose.Schema(
     project: { type: String, required: true, trim: true },
     department: { type: String, required: true, trim: true, lowercase: true },
     unit: { type: String, trim: true, default: "" },
+    /** On-hand quantity the Store department can issue. */
+    stock: { type: Number, default: 0, min: 0 },
     /** Stationery is listed for every department in the company. Other products stay on their department. */
     shared: { type: Boolean, default: false },
     active: { type: Boolean, default: true },

@@ -94,4 +94,67 @@ const updateCompany = async (req, res) => {
   }
 };
 
-module.exports = { getCompany, updateCompany, applyCompanyInput, DATE_FORMATS };
+const LETTERHEAD_FIELDS = ["address", "email", "phone", "mobile", "website", "fax", "poBox", "crNumber", "vatNumber"];
+
+function publicLetterhead(company, { includeLogo = false } = {}) {
+  const source = company.letterhead || {};
+  const letterhead = Object.fromEntries(LETTERHEAD_FIELDS.map((key) => [key, source[key] || ""]));
+  letterhead.hasLogo = Boolean(source.logoData);
+  letterhead.companyName = company.name || "";
+  if (includeLogo) letterhead.logoData = source.logoData || "";
+  return letterhead;
+}
+
+const getLetterhead = async (req, res) => {
+  try {
+    res.status(200).json({ letterhead: publicLetterhead(req.tenant.company, { includeLogo: true }) });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+const updateLetterhead = async (req, res) => {
+  try {
+    const company = req.tenant.company;
+    if (!company.letterhead) company.letterhead = {};
+    LETTERHEAD_FIELDS.forEach((field) => {
+      if (req.body[field] === undefined) return;
+      company.letterhead[field] = String(req.body[field] ?? "").trim();
+    });
+    if (req.body.logoData !== undefined) {
+      const logo = String(req.body.logoData || "");
+      if (logo && !/^data:image\/(png|jpeg);base64,/.test(logo)) {
+        return res.status(400).json({ message: "Logo must be a PNG or JPEG image" });
+      }
+      if (logo.length > 700000) {
+        return res.status(400).json({ message: "Logo must be smaller than 500 KB" });
+      }
+      company.letterhead.logoData = logo;
+    }
+    company.markModified("letterhead");
+    await company.save();
+    await logAudit({
+      action: "update",
+      module: "company_settings",
+      summary: `Updated the PDF letterhead for ${company.name}`,
+      actor: req.user,
+      targetType: "company",
+      targetId: company._id.toString(),
+    });
+    res.status(200).json({
+      message: "PDF letterhead saved",
+      letterhead: publicLetterhead(company, { includeLogo: true }),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+};
+
+module.exports = {
+  getCompany,
+  updateCompany,
+  getLetterhead,
+  updateLetterhead,
+  applyCompanyInput,
+  DATE_FORMATS,
+};

@@ -304,6 +304,18 @@ body {
   color: #f4fbff;
 }
 
+.nav-submenu {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.theme-rest .nav-submenu {
+  background: rgba(15, 42, 68, 0.06);
+}
+
+.theme-night .nav-submenu {
+  background: rgba(0, 0, 0, 0.32);
+}
+
 /* Sidebar submenu flyout — theme-safe colors (avoids text-white remaps) */
 .nav-flyout {
   background: #ffffff;

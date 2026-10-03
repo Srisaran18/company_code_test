@@ -25,6 +25,7 @@ function toPublic(item) {
     department: item.department,
     departmentId: item.departmentId ? item.departmentId.toString() : "",
     unit: item.unit || "",
+    stock: Number(item.stock) || 0,
     shared: item.shared === true,
     active: item.active !== false,
   };
@@ -32,6 +33,17 @@ function toPublic(item) {
 
 function normalizeProductId(value) {
   return String(value || "").trim().toUpperCase();
+}
+
+function readStock(value, fallback = 0) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const stock = Number(value);
+  if (!Number.isFinite(stock) || stock < 0) {
+    const error = new Error("Stock must be zero or more");
+    error.statusCode = 400;
+    throw error;
+  }
+  return Math.round(stock * 1000) / 1000;
 }
 
 /** Materials the caller may see: own projects/departments, plus company-wide shared stationery. */
@@ -180,6 +192,7 @@ const saveMaterial = async (req, res) => {
         project: project.name,
         department: department.key,
         unit: String(unit || "").trim(),
+        stock: readStock(req.body.stock, 0),
         shared: req.body.shared === true,
         active: true,
       });
@@ -202,6 +215,7 @@ const saveMaterial = async (req, res) => {
     material.project = project.name;
     material.department = department.key;
     material.unit = String(unit || "").trim();
+    material.stock = readStock(req.body.stock, Number(material.stock) || 0);
     material.shared = req.body.shared === true;
     material.active = true;
     await material.save();

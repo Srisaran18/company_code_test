@@ -239,6 +239,10 @@ async function seedDemo() {
 
 async function seed() {
   await syncFeatures();
+  const companies = await Company.find().select("_id");
+  for (const company of companies) {
+    await ensureSystemRoles(company._id);
+  }
   if (process.env.SEED_DEMO_DATA === "true") await seedDemo();
 }
 

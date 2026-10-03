@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { icons } from "../components/icons";
 
@@ -20,7 +21,7 @@ function NavItem({ item, showLabels, onMobileClose, nested = false }) {
   return (
     <NavLink
       to={item.to}
-      end={item.to === "/" || item.to === "/platform" || item.to === "/platform/dashboard"}
+      end={item.to === "/" || item.to === "/company" || item.to === "/platform" || item.to === "/platform/dashboard"}
       title={item.label}
       onClick={() => {
         if (window.innerWidth < 1024) onMobileClose();
@@ -148,8 +149,9 @@ function NavGroup({ item, showLabels, onMobileClose }) {
         ) : null}
       </button>
 
-      {showLabels && accordionOpen
-        ? item.children.map((child) => (
+      {showLabels && accordionOpen ? (
+        <div className="nav-submenu space-y-0.5 rounded-2xl p-1">
+          {item.children.map((child) => (
             <NavItem
               key={child.key}
               item={child}
@@ -157,10 +159,12 @@ function NavGroup({ item, showLabels, onMobileClose }) {
               onMobileClose={onMobileClose}
               nested
             />
-          ))
-        : null}
+          ))}
+        </div>
+      ) : null}
 
-      {iconsOnly && flyoutOpen ? (
+      {iconsOnly && flyoutOpen
+        ? createPortal(
         <div
           className="fixed z-50"
           style={{ top: flyoutPos?.top ?? 0, left: flyoutPos?.left ?? 0 }}
@@ -195,7 +199,8 @@ function NavGroup({ item, showLabels, onMobileClose }) {
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );

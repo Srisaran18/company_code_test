@@ -21,6 +21,7 @@ import MaterialsListPage from "../pages/materials/MaterialsListPage";
 import MaterialsPage from "../pages/materials/MaterialsPage";
 import ProjectsPage from "../pages/projects/ProjectsPage";
 import CompanySettingsPage from "../pages/company/CompanySettingsPage";
+import PdfLetterheadPage from "../pages/company/PdfLetterheadPage";
 import PlatformCompaniesPage from "../pages/platform/PlatformCompaniesPage";
 import PlatformCompanyDetailPage from "../pages/platform/PlatformCompanyDetailPage";
 import PlatformCompanyCreatePage from "../pages/platform/PlatformCompanyCreatePage";
@@ -116,8 +117,10 @@ export default function AppRoutes() {
           <Route path="/audits" element={<AuditsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile" element={<Navigate to="/settings" replace />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/company" element={<CompanySettingsPage />} />
+          <Route path="/company/pdf" element={<PdfLetterheadPage />} />
           <Route path="/platform" element={<PlatformCompaniesPage />} />
           <Route path="/platform/dashboard" element={<PlatformDashboardPage />} />
           <Route path="/platform/new" element={<PlatformCompanyCreatePage />} />

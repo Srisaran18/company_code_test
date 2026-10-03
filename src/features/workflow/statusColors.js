@@ -6,6 +6,8 @@ export const statusBadgeClass = {
   Returned: "bg-[#ffedd5] text-[#c2410c] ring-1 ring-[#fdba74]",
   Rejected: "bg-[#fee2e2] text-[#b91c1c] ring-1 ring-[#fca5a5]",
   Approved: "bg-[#d1fae5] text-[#047857] ring-1 ring-[#6ee7b7]",
+  "With Store": "bg-[#cffafe] text-[#0e7490] ring-1 ring-[#67e8f9]",
+  "Partially Issued": "bg-[#fef3c7] text-[#b45309] ring-1 ring-[#fcd34d]",
   Sourcing: "bg-[#ede9fe] text-[#6d28d9] ring-1 ring-[#c4b5fd]",
   "In Procurement": "bg-[#ede9fe] text-[#6d28d9] ring-1 ring-[#c4b5fd]",
   "RFQ Issued": "bg-[#ede9fe] text-[#6d28d9] ring-1 ring-[#c4b5fd]",
@@ -26,6 +28,9 @@ export const statusBadgeClass = {
   Open: "bg-[#dbeafe] text-[#1d4ed8] ring-1 ring-[#93c5fd]",
   Released: "bg-[#ccfbf1] text-[#0f766e] ring-1 ring-[#5eead4]",
   "Not started": "bg-[#e8eef4] text-[#334155] ring-1 ring-[#c5d0dc]",
+  "P1 — Urgent": "bg-[#fee2e2] text-[#b91c1c] ring-1 ring-[#fca5a5]",
+  "P2 — High": "bg-[#ffedd5] text-[#c2410c] ring-1 ring-[#fdba74]",
+  "P3 — Normal": "bg-[#e8eef4] text-[#334155] ring-1 ring-[#c5d0dc]",
 };
 
 export const statusDotClass = {
@@ -35,6 +40,8 @@ export const statusDotClass = {
   Returned: "bg-[#ea580c]",
   Rejected: "bg-[#dc2626]",
   Approved: "bg-[#059669]",
+  "With Store": "bg-[#0891b2]",
+  "Partially Issued": "bg-[#d97706]",
   Sourcing: "bg-[#7c3aed]",
   "In Procurement": "bg-[#7c3aed]",
   "RFQ Issued": "bg-[#7c3aed]",
@@ -55,6 +62,9 @@ export const statusDotClass = {
   Open: "bg-[#2563eb]",
   Released: "bg-[#0d9488]",
   "Not started": "bg-[#64748b]",
+  "P1 — Urgent": "bg-[#dc2626]",
+  "P2 — High": "bg-[#ea580c]",
+  "P3 — Normal": "bg-[#64748b]",
 };
 
 export const stageColors = {
@@ -81,6 +91,12 @@ export const stageColors = {
     current: "border-emerald-500 bg-emerald-500 text-white shadow-[0_0_0_6px_rgba(16,185,129,0.28)]",
     line: "bg-emerald-400",
     text: "text-emerald-700",
+  },
+  "With Store": {
+    done: "border-cyan-600 bg-cyan-600 text-white",
+    current: "border-cyan-600 bg-cyan-600 text-white shadow-[0_0_0_6px_rgba(8,145,178,0.28)]",
+    line: "bg-cyan-500",
+    text: "text-cyan-700",
   },
   Sourcing: {
     done: "border-violet-500 bg-violet-500 text-white",
